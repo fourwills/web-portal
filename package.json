@@ -1,0 +1,27 @@
+{
+  "name": "client-portal",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 5174",
+    "build": "vite build",
+    "preview": "vite preview",
+    "setup": "powershell -ExecutionPolicy Bypass -File ./scripts/setup-env.ps1",
+    "verify": "npm run build && node ./scripts/verify-build.mjs",
+    "test": "node ./scripts/verify-build.mjs && node ./scripts/test-auth-api.mjs"
+  },
+  "dependencies": {
+    "axios": "^1.9.0",
+    "lucide-react": "^0.511.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.7",
+    "@vitejs/plugin-react": "^4.5.0",
+    "tailwindcss": "^4.1.7",
+    "vite": "^6.3.5"
+  }
+}
