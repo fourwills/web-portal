@@ -90,7 +90,7 @@ Vercel is only hosting the **frontend**; all data still comes from your DNL API 
 | Section | API |
 |---------|-----|
 | Account | Profile, API keys, **platform IPs** (`VITE_PLATFORM_IPS`), default IPs |
-| Billing | Invoices, PayPal/Stripe (`/config/public/payment`, `/home/client/payment`) |
+| Billing | Invoices; Stripe card form (Stripe.js → `POST /home/client/payment` with `strip_id`); PayPal SDK |
 | Trunks | Registered host IPs from trunk `ip[]`; routing via `/home/client/trunk/{id}/prefix/list`; ingress/egress lists |
 | Rates | Primary: trunk routing (`rate_table_name`, `tech_prefix`); fallback global `rate_table/list`, `rate/list`; CSV export (API or client-side) |
 | DIDs | `did/list`, `did/free/list`, `did_api/search_local`, `did_api/order_local` |
