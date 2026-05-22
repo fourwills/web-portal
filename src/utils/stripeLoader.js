@@ -1,7 +1,8 @@
-/** Load Stripe.js v3 and return a Stripe instance. */
+/** Load Stripe.js v3 and return a Stripe instance bound to the publishable key. */
 export function loadStripeJs(publishableKey) {
   return new Promise((resolve, reject) => {
-    if (!publishableKey?.trim()) {
+    const key = publishableKey?.trim();
+    if (!key) {
       reject(new Error('Stripe publishable key is missing.'));
       return;
     }
@@ -11,7 +12,7 @@ export function loadStripeJs(publishableKey) {
         reject(new Error('Stripe.js failed to initialize.'));
         return;
       }
-      resolve(window.Stripe(publishableKey.trim()));
+      resolve(window.Stripe(key));
     };
 
     if (window.Stripe) {
@@ -27,7 +28,7 @@ export function loadStripeJs(publishableKey) {
     }
 
     const script = document.createElement('script');
-    script.src = 'https://js.stripe.com/v3/';
+    script.src = 'https://js.stripe.com/v3';
     script.async = true;
     script.dataset.stripeJs = '1';
     script.onload = init;

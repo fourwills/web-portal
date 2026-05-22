@@ -23,39 +23,33 @@ export const paymentService = {
     };
   },
 
+  /**
+   * Stripe Checkout (same as classic portal):
+   *   POST /stripe/checkout → { sessionId }, then redirect with Stripe.js.
+   * Optional invoice_id when paying a specific invoice.
+   */
+  createStripeCheckoutSession: async ({ amount, invoiceId, baseUrl }) => {
+    if (isMockMode()) {
+      return { sessionId: 'mock_session', success: true };
+    }
+    const body = {
+      base_url: baseUrl ?? window.location.origin,
+      amount: Number(amount),
+    };
+    if (invoiceId) body.invoice_id = Number(invoiceId);
+    const res = await api.post('/stripe/checkout', body);
+    return unwrapPayload(res.data) ?? res.data;
+  },
+
+  /**
+   * Direct gateway record (legacy). Most accounts return 403 here — Stripe Checkout
+   * is the supported flow on the live portal.
+   */
   createGatewayPayment: async (body) => {
     if (isMockMode()) {
       return { id: Date.now(), ...body, status: 'initial' };
     }
     const res = await api.post('/home/client/payment', body);
     return unwrapPayload(res.data);
-  },
-
-  /**
-   * Classic DNL portal flow: cardnumber + cardexpmonth + cardexpyear on POST /home/client/payment.
-   * Optional strip_id (Stripe token) when using Stripe.js tokenization.
-   */
-  createStripePayment: async ({
-    amount,
-    clientName,
-    cardnumber,
-    cardexpmonth,
-    cardexpyear,
-    stripId,
-  }) => {
-    const body = {
-      amount,
-      type: 'stripe',
-      status: 'initial',
-      client_name: clientName,
-    };
-    if (stripId) {
-      body.strip_id = stripId;
-    } else {
-      body.cardnumber = cardnumber;
-      body.cardexpmonth = cardexpmonth;
-      body.cardexpyear = cardexpyear;
-    }
-    return paymentService.createGatewayPayment(body);
   },
 };
