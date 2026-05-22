@@ -6,6 +6,10 @@
   "scripts": {
     "dev": "vite --port 5174",
     "build": "node ./scripts/validate-env.mjs && vite build",
+    "build:hostverge": "node ./scripts/build-hostverge.mjs",
+    "package:hostverge": "powershell -ExecutionPolicy Bypass -File ./scripts/package-hostverge.ps1",
+    "deploy:hostverge": "node ./scripts/build-hostverge.mjs && powershell -ExecutionPolicy Bypass -File ./scripts/deploy-hostverge.ps1",
+    "build:vercel": "node ./scripts/validate-env.mjs && vite build",
     "preview": "vite preview",
     "setup": "powershell -ExecutionPolicy Bypass -File ./scripts/setup-env.ps1",
     "verify": "npm run build && node ./scripts/verify-build.mjs",

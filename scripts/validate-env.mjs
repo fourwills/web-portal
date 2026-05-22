@@ -1,27 +1,18 @@
-import fs from 'fs';
-import path from 'path';
+import { loadEnvFile } from './load-env-file.mjs';
 
 const DEFAULT_BASE_URL = 'https://portal.incorpus.in/api_dnl/v1';
-
-function loadEnvFile(filename) {
-  const filePath = path.join(process.cwd(), filename);
-  if (!fs.existsSync(filePath)) return {};
-  const vars = {};
-  for (const line of fs.readFileSync(filePath, 'utf8').split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    const eq = trimmed.indexOf('=');
-    if (eq === -1) continue;
-    vars[trimmed.slice(0, eq).trim()] = trimmed.slice(eq + 1).trim();
-  }
-  return vars;
-}
 
 function resolveBaseUrl() {
   const fromProcess = process.env.VITE_API_BASE_URL?.trim();
   if (fromProcess) return { base: fromProcess, source: 'environment' };
 
-  for (const file of ['.env.production', '.env', '.env.example']) {
+  const profile = process.env.BUILD_PROFILE?.trim();
+  const envFiles =
+    profile === 'hostverge'
+      ? ['.env.hostverge', '.env.production', '.env', '.env.example']
+      : ['.env.production', '.env', '.env.example'];
+
+  for (const file of envFiles) {
     const value = loadEnvFile(file).VITE_API_BASE_URL?.trim();
     if (value) return { base: value, source: file };
   }
@@ -41,8 +32,20 @@ if (!process.env.VITE_API_BASE_URL) {
   process.env.VITE_API_BASE_URL = base;
 }
 if (!process.env.VITE_DEV_MOCK_AUTH) {
-  const prod = loadEnvFile('.env.production');
-  process.env.VITE_DEV_MOCK_AUTH = prod.VITE_DEV_MOCK_AUTH ?? 'false';
+  const mockSource =
+    process.env.BUILD_PROFILE === 'hostverge'
+      ? loadEnvFile('.env.hostverge')
+      : loadEnvFile('.env.production');
+  process.env.VITE_DEV_MOCK_AUTH = mockSource.VITE_DEV_MOCK_AUTH ?? 'false';
+}
+if (!process.env.VITE_PLATFORM_IPS) {
+  const ipSource =
+    process.env.BUILD_PROFILE === 'hostverge'
+      ? loadEnvFile('.env.hostverge')
+      : loadEnvFile('.env.production');
+  if (ipSource.VITE_PLATFORM_IPS) {
+    process.env.VITE_PLATFORM_IPS = ipSource.VITE_PLATFORM_IPS;
+  }
 }
 
 console.log(`OK  VITE_API_BASE_URL=${base} (${source})`);

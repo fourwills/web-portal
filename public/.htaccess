@@ -1,0 +1,16 @@
+# React SPA — send unknown paths to index.html (Apache on cPanel / Hostverge)
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>
+
+# Optional: long cache for hashed assets (Vite puts files in /assets/)
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js|css|woff2?|png|jpg|svg|ico)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+</IfModule>
