@@ -1,5 +1,11 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "rewrites": [
+    {
+      "source": "/api_dnl/v1/:path*",
+      "destination": "https://portal.incorpus.in/api_dnl/v1/:path*"
+    },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
   "headers": [
     {
       "source": "/assets/(.*)",

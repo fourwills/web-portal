@@ -7,8 +7,9 @@ import DataTable from '../UI/DataTable';
 import ErrorBanner from '../UI/ErrorBanner';
 import { PageLoading } from '../UI/PageState';
 import { formatDateTime, formatMoney } from '../../utils/apiHelpers';
-import { formatPaymentError, getClassicPortalOrigin } from '../../utils/paymentErrors';
-import StripeCardForm from './StripeCardForm';
+import { formatPaymentError } from '../../utils/paymentErrors';
+import { CLASSIC_ONLINE_PAYMENT_URL } from '../../constants/portalUrls';
+import ClassicStripePayment from './ClassicStripePayment';
 
 const gatewayColumns = [
   { key: 'paid_on', label: 'Date', render: (r) => formatDateTime(r.paid_on ?? r.entered_on) },
@@ -49,12 +50,21 @@ export default function PaymentSection() {
 
   const config = configQuery.data;
   const profile = profileQuery.data;
-  const stripeKey = config?.stripe_publisher_key?.trim();
   const hasPaypal = Boolean(config?.paypal_account?.trim());
-  const hasStripe = Boolean(stripeKey);
+  const hasStripe = Boolean(config?.stripe_publisher_key?.trim());
   const parsedAmount = parseFloat(amount);
   const amountValid = parsedAmount > 0;
-  const classicPortal = getClassicPortalOrigin();
+  const clientName = profile?.company_name ?? profile?.client_name;
+
+  const onStripeSuccess = (result) => {
+    const redirectUrl = result?.response ?? result?.redirect_url;
+    if (redirectUrl && typeof redirectUrl === 'string' && redirectUrl.startsWith('http')) {
+      window.location.href = redirectUrl;
+      return;
+    }
+    setMessage('Payment submitted successfully. Balance updates after the gateway confirms.');
+    gatewayQuery.refetch();
+  };
 
   const startPayPal = async () => {
     if (!amountValid) {
@@ -82,7 +92,7 @@ export default function PaymentSection() {
               type: 'paypal',
               status: 'success',
               paypal_transaction_id: data.orderID,
-              client_name: profile?.company_name ?? profile?.client_name,
+              client_name: clientName,
             });
             setMessage('PayPal payment recorded successfully.');
             gatewayQuery.refetch();
@@ -96,32 +106,8 @@ export default function PaymentSection() {
       }).render(paypalRef.current);
     } catch {
       setError(
-        'PayPal checkout could not load. The value in payment settings may not be a PayPal REST Client ID, or an ad blocker may block the SDK.',
+        'PayPal checkout could not load. Confirm PayPal Client ID in system settings or use the classic portal link below.',
       );
-    }
-  };
-
-  const handleStripePay = async (paymentMethodId) => {
-    setError('');
-    setMessage('');
-    setPaying(true);
-    try {
-      const result = await paymentService.createStripePayment({
-        amount: parsedAmount,
-        paymentMethodId,
-        clientName: profile?.company_name ?? profile?.client_name,
-      });
-      const redirectUrl = result?.response ?? result?.redirect_url;
-      if (redirectUrl && typeof redirectUrl === 'string' && redirectUrl.startsWith('http')) {
-        window.location.href = redirectUrl;
-        return;
-      }
-      setMessage('Stripe payment submitted. Your balance will update after the gateway confirms.');
-      gatewayQuery.refetch();
-    } catch (err) {
-      setError(formatPaymentError(err));
-    } finally {
-      setPaying(false);
     }
   };
 
@@ -130,14 +116,32 @@ export default function PaymentSection() {
   return (
     <div className="space-y-6">
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">Make a payment</h2>
+        <h2 className="text-lg font-semibold text-slate-900">Online payment</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Top up your account with PayPal or Stripe when your provider has enabled them.
+          Same flow as the{' '}
+          <a
+            href={CLASSIC_ONLINE_PAYMENT_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-sky-600 hover:underline"
+          >
+            classic client portal
+          </a>
+          : enter amount, card details, and pay (or use PayPal).
         </p>
+
+        <a
+          href={CLASSIC_ONLINE_PAYMENT_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 inline-flex text-sm font-medium text-sky-700 hover:underline"
+        >
+          Open classic payment page →
+        </a>
 
         {!hasPaypal && !hasStripe && (
           <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            No online payment gateways are configured yet. Your provider must set PayPal and/or Stripe keys in system payment settings and enable Online Payment on your portal user.
+            No gateways configured. Enable PayPal/Stripe in system payment settings and Online Payment on your portal user.
           </p>
         )}
 
@@ -161,30 +165,27 @@ export default function PaymentSection() {
 
         {hasStripe && (
           <div className="mt-4">
-            <h3 className="text-sm font-semibold text-slate-800">Pay with Stripe</h3>
-            <p className="mt-1 text-xs text-slate-500">
-              Enter the amount above, then your card details. Payments are sent to the DNL billing API.
-            </p>
-            {stripeKey?.startsWith('pk_test') && (
-              <p className="mt-1 text-xs text-amber-700">Stripe test mode — use Stripe test cards only.</p>
+            <h3 className="text-sm font-semibold text-slate-800">Stripe</h3>
+            {config.stripe_publisher_key?.startsWith('pk_test') && (
+              <p className="mt-1 text-xs text-amber-700">Stripe test mode — use test card numbers only.</p>
             )}
             {amountValid ? (
-              <StripeCardForm
-                publishableKey={stripeKey}
+              <ClassicStripePayment
                 amount={parsedAmount}
+                clientName={clientName}
                 disabled={paying}
-                onPay={handleStripePay}
-                onLoadError={setError}
+                onSuccess={onStripeSuccess}
+                onError={setError}
               />
             ) : (
-              <p className="mt-2 text-sm text-slate-500">Enter an amount to show the card form.</p>
+              <p className="mt-2 text-sm text-slate-500">Enter an amount to enable card payment.</p>
             )}
           </div>
         )}
 
         {hasPaypal && (
           <div className="mt-6 border-t border-slate-100 pt-4">
-            <h3 className="text-sm font-semibold text-slate-800">Pay with PayPal</h3>
+            <h3 className="text-sm font-semibold text-slate-800">PayPal</h3>
             <button
               type="button"
               disabled={paying || !amountValid}
@@ -202,21 +203,6 @@ export default function PaymentSection() {
 
         <ErrorBanner message={error} />
         {message && <p className="mt-3 text-sm text-emerald-700">{message}</p>}
-
-        {error?.includes('permission denied') && classicPortal && (
-          <p className="mt-3 text-sm text-slate-600">
-            You can also try the classic portal at{' '}
-            <a
-              href={classicPortal}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-medium text-sky-600 hover:underline"
-            >
-              {classicPortal}
-            </a>{' '}
-            (same login) while your provider fixes API permissions.
-          </p>
-        )}
       </div>
 
       <section>

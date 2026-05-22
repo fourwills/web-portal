@@ -31,13 +31,31 @@ export const paymentService = {
     return unwrapPayload(res.data);
   },
 
-  /** DNL API uses typo field names strip_id / strip_transaction_id in swagger. */
-  createStripePayment: async ({ amount, paymentMethodId, clientName }) =>
-    paymentService.createGatewayPayment({
+  /**
+   * Classic DNL portal flow: cardnumber + cardexpmonth + cardexpyear on POST /home/client/payment.
+   * Optional strip_id (Stripe token) when using Stripe.js tokenization.
+   */
+  createStripePayment: async ({
+    amount,
+    clientName,
+    cardnumber,
+    cardexpmonth,
+    cardexpyear,
+    stripId,
+  }) => {
+    const body = {
       amount,
       type: 'stripe',
       status: 'initial',
-      strip_id: paymentMethodId,
       client_name: clientName,
-    }),
+    };
+    if (stripId) {
+      body.strip_id = stripId;
+    } else {
+      body.cardnumber = cardnumber;
+      body.cardexpmonth = cardexpmonth;
+      body.cardexpyear = cardexpyear;
+    }
+    return paymentService.createGatewayPayment(body);
+  },
 };

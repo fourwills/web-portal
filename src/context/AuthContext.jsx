@@ -24,6 +24,12 @@ export function AuthProvider({ children }) {
   const login = async (emailOrName, password) => {
     const data = await authService.login(emailOrName, password);
     if (data.token) localStorage.setItem('auth_token', data.token);
+    try {
+      const refreshed = await authService.checkToken();
+      if (refreshed.token) localStorage.setItem('auth_token', refreshed.token);
+    } catch {
+      /* keep initial token */
+    }
     localStorage.setItem('auth_user', JSON.stringify(data.user));
     setUser(data.user);
     return data;

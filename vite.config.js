@@ -8,7 +8,7 @@ export default defineConfig({
     port: 5174,
     strictPort: false,
     proxy: {
-      '/api': {
+      '/api_dnl/v1': {
         target: 'https://portal.incorpus.in',
         changeOrigin: true,
         secure: true,
