@@ -1,4 +1,5 @@
 import api from '../config/api';
+import { API_PATHS } from '../constants/apiPaths';
 
 const MOCK_ENABLED = import.meta.env.VITE_DEV_MOCK_AUTH === 'true';
 const MOCK_USER = import.meta.env.VITE_TEST_EMAIL_OR_NAME || 'demo';
@@ -31,7 +32,7 @@ export const authService = {
       };
     }
 
-    const res = await api.post('/auth', { email_or_name: emailOrName, password });
+    const res = await api.post(API_PATHS.auth, { email_or_name: emailOrName, password });
     const token = extractToken(res.data);
     const user = extractUser(res.data, emailOrName);
     return { token, user, raw: res.data };
@@ -41,14 +42,14 @@ export const authService = {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_user');
     try {
-      await api.post('/auth/check-token');
+      await api.post(API_PATHS.authCheckToken);
     } catch {
       /* session may already be cleared */
     }
   },
 
   checkToken: async () => {
-    const res = await api.post('/auth/check-token');
+    const res = await api.post(API_PATHS.authCheckToken);
     return { token: extractToken(res.data), user: extractUser(res.data), raw: res.data };
   },
 };

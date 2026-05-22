@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 5174",
-    "build": "vite build",
+    "build": "node ./scripts/validate-env.mjs && vite build",
     "preview": "vite preview",
     "setup": "powershell -ExecutionPolicy Bypass -File ./scripts/setup-env.ps1",
     "verify": "npm run build && node ./scripts/verify-build.mjs",

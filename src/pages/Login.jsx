@@ -15,6 +15,18 @@ function getErrorMessage(err) {
     if (first) return first;
   }
   if (err.response?.status === 401) return 'Invalid username or password.';
+  if (err.response?.status === 404) {
+    const url = err.config?.baseURL && err.config?.url
+      ? `${err.config.baseURL}${err.config.url}`
+      : err.config?.url;
+    return `API endpoint not found (${url}). Login must use POST /auth — redeploy the latest build or hard-refresh (Ctrl+Shift+R).`;
+  }
+  if (err.message === 'Network Error' || err.code === 'ERR_NETWORK') {
+    const url = err.config?.baseURL && err.config?.url
+      ? `${err.config.baseURL}${err.config.url}`
+      : 'API';
+    return `Cannot reach the API (${url}). Check VITE_API_BASE_URL on Vercel and use a hard refresh if you recently deployed.`;
+  }
   return err.message || 'Login failed. Please try again.';
 }
 
