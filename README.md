@@ -13,7 +13,6 @@ If PowerShell says **running scripts is disabled** when you run `npm`, use **`np
 If `npm` is not recognized or `nvm use` shows **Access is denied**, run once in PowerShell:
 
 ```powershell
-cd e:\Development\Projects\WebPortal\client-portal
 .\scripts\setup-env.ps1
 ```
 
@@ -30,7 +29,6 @@ This script:
 PowerShell may block `npm` (execution policy). Use **`npm.cmd`** or the helper scripts:
 
 ```powershell
-cd e:\Development\Projects\WebPortal\client-portal
 npm.cmd install
 npm.cmd run dev
 ```
