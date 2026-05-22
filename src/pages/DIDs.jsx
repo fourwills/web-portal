@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { didService, normalizeDidNumber } from '../services/didService';
 import { useApi } from '../hooks/useApi';
 import DataTable from '../components/UI/DataTable';
+import ConfirmDialog from '../components/UI/ConfirmDialog';
 import ErrorBanner from '../components/UI/ErrorBanner';
 import { PageError, PageLoading } from '../components/UI/PageState';
 import { formatMoney, isMockMode } from '../utils/apiHelpers';
@@ -23,14 +24,6 @@ const FREE_COLS = [
   { key: 'lata', label: 'LATA' },
   { key: 'client_billing_rule_name', label: 'Billing plan' },
   { key: 'active', label: 'Active', render: (r) => (r.active ? 'Yes' : 'No') },
-];
-
-const MINE_COLS = [
-  { key: 'did', label: 'Number' },
-  { key: 'client_billing_rule_name', label: 'Billing plan' },
-  { key: 'state', label: 'State' },
-  { key: 'country', label: 'Country' },
-  { key: 'assigned_date', label: 'Assigned' },
 ];
 
 const TOLL_PREFIXES = ['1800', '1888', '1877', '1866', '1855', '1844', '1833'];
@@ -61,6 +54,8 @@ export default function DIDs() {
   const [actionMsg, setActionMsg] = useState('');
   const [actionError, setActionError] = useState('');
   const [ordering, setOrdering] = useState(false);
+  const [releaseTarget, setReleaseTarget] = useState(null);
+  const [releasing, setReleasing] = useState(false);
 
   const freeItems = free.data?.items ?? [];
   const mineItems = mine.data?.items ?? [];
@@ -70,6 +65,52 @@ export default function DIDs() {
     if (!ruleItems.length) return '';
     return ruleItems.map((r) => r.name ?? r.client_billing_rule_name).filter(Boolean).join(', ');
   }, [ruleItems]);
+
+  const handleReleaseConfirm = async () => {
+    if (!releaseTarget) return;
+    setReleasing(true);
+    setActionError('');
+    setActionMsg('');
+    const display = releaseTarget.did ?? releaseTarget.number ?? normalizeDidNumber(releaseTarget);
+    try {
+      const result = await didService.releaseOrDisableDid(releaseTarget);
+      if (result.method === 'disable') {
+        setActionMsg(`Released ${display} (disabled — release API was unavailable on the server).`);
+      } else {
+        setActionMsg(`Released ${display} from your account.`);
+      }
+      setReleaseTarget(null);
+      mine.refetch();
+    } catch (err) {
+      setActionError(err.response?.data?.error?.message ?? err.message ?? 'Release failed');
+    } finally {
+      setReleasing(false);
+    }
+  };
+
+  const mineColumns = useMemo(
+    () => [
+      { key: 'did', label: 'Number', render: (r) => r.did ?? r.number ?? '—' },
+      { key: 'client_billing_rule_name', label: 'Billing plan' },
+      { key: 'state', label: 'State' },
+      { key: 'country', label: 'Country' },
+      { key: 'assigned_date', label: 'Assigned' },
+      {
+        key: '_release',
+        label: '',
+        render: (row) => (
+          <button
+            type="button"
+            onClick={() => setReleaseTarget(row)}
+            className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50"
+          >
+            Release
+          </button>
+        ),
+      },
+    ],
+    [],
+  );
 
   const toggleSelect = (row) => {
     const num = normalizeDidNumber(row);
@@ -290,6 +331,21 @@ export default function DIDs() {
       <ErrorBanner message={actionError} />
       {actionMsg && <p className="text-sm text-emerald-700">{actionMsg}</p>}
 
+      <ConfirmDialog
+        open={Boolean(releaseTarget)}
+        title="Release DID?"
+        message={
+          releaseTarget
+            ? `Remove ${releaseTarget.did ?? releaseTarget.number ?? 'this number'} from your account? This cannot be undone from the portal.`
+            : ''
+        }
+        confirmLabel="Release"
+        danger
+        busy={releasing}
+        onConfirm={handleReleaseConfirm}
+        onCancel={() => !releasing && setReleaseTarget(null)}
+      />
+
       {mainTab === 'mine' && (
         <section className="space-y-3">
           {mine.loading && !mine.data ? (
@@ -297,11 +353,16 @@ export default function DIDs() {
           ) : mine.error ? (
             <PageError message={mine.error} onRetry={mine.refetch} />
           ) : (
-            <DataTable
-              columns={MINE_COLS}
-              rows={mineItems}
-              emptyMessage="No DIDs on your account yet. Use Buy DIDs to order numbers."
-            />
+            <>
+              <p className="text-sm text-slate-500">
+                Use <strong>Release</strong> to return a number to the provider (same as the classic portal).
+              </p>
+              <DataTable
+                columns={mineColumns}
+                rows={mineItems}
+                emptyMessage="No DIDs on your account yet. Use Buy DIDs to order numbers."
+              />
+            </>
           )}
         </section>
       )}
