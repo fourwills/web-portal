@@ -254,6 +254,7 @@ client-portal/
 
 | Topic | Document |
 |-------|----------|
+| **PDF (configuration + Hostverge deploy)** | `docs/Client-Portal-Configuration-Guide.pdf` — generate with `npm run docs:pdf` |
 | Hostverge deploy (`portal.thevoiptalk.com`) | [DEPLOYMENT_HOSTVERGE.md](./DEPLOYMENT_HOSTVERGE.md) |
 | Dev setup & tests | [README.md](./README.md) |
 | API auth field names | [TEST_CREDENTIALS.md](./TEST_CREDENTIALS.md) |
