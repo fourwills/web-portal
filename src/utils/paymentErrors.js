@@ -24,12 +24,17 @@ export function formatPaymentError(err) {
   return apiMsg ?? 'Payment failed. Please try again.';
 }
 
+import { CLASSIC_ONLINE_PAYMENT_URL, CLASSIC_PORTAL_ORIGIN } from '../constants/portalUrls';
+
 export function getClassicPortalOrigin() {
   const base = import.meta.env.VITE_API_BASE_URL ?? '';
+  if (base.startsWith('/')) return CLASSIC_PORTAL_ORIGIN;
   try {
     const u = new URL(base);
     return `${u.protocol}//${u.host}`;
   } catch {
-    return null;
+    return CLASSIC_PORTAL_ORIGIN;
   }
 }
+
+export { CLASSIC_ONLINE_PAYMENT_URL };
