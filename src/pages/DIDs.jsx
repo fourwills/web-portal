@@ -74,9 +74,11 @@ export default function DIDs() {
         </p>
       )}
 
+      <h2 className="text-lg font-semibold text-slate-900">My DIDs</h2>
+
       <div className="flex items-start justify-between gap-3">
         <p className="text-sm text-slate-600">
-          Numbers on your account. Use <strong>Release</strong> on any number you are no longer using.
+          Your assigned numbers. Use <strong>Release</strong> on any number you are no longer using.
         </p>
         <button
           type="button"
