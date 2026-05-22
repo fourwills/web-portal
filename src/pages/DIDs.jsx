@@ -17,19 +17,10 @@ const SEARCH_COLS = [
   { key: 'nrc', label: 'NRC', render: (r) => (r.nrc != null ? formatMoney(r.nrc) : '—') },
 ];
 
-const FREE_COLS = [
-  { key: 'did', label: 'Number', render: (r) => r.did ?? r.number ?? '—' },
-  { key: 'state', label: 'State' },
-  { key: 'country', label: 'Country' },
-  { key: 'lata', label: 'LATA' },
-  { key: 'active', label: 'Active', render: (r) => (r.active ? 'Yes' : 'No') },
-];
-
 const TOLL_PREFIXES = ['1800', '1888', '1877', '1866', '1855', '1844', '1833'];
 
 const PAGE_TABS = [
   { id: 'mine', label: 'My DIDs' },
-  { id: 'free', label: 'Available' },
   { id: 'search', label: 'Search local' },
   { id: 'tollfree', label: 'Toll-free' },
 ];
@@ -38,7 +29,6 @@ export default function DIDs() {
   const [tab, setTab] = useState('mine');
 
   const mine = useApi(() => didService.getMyDids({ per_page: 100 }), []);
-  const free = useApi(() => didService.getFreeDids(), []);
 
   const [searchCountry, setSearchCountry] = useState('US');
   const [searchState, setSearchState] = useState('');
@@ -61,7 +51,6 @@ export default function DIDs() {
   const [releaseTarget, setReleaseTarget] = useState(null);
   const [releasing, setReleasing] = useState(false);
 
-  const freeItems = free.data?.items ?? [];
   const mineItems = mine.data?.items ?? [];
 
   const mineColumns = useMemo(
@@ -160,11 +149,10 @@ export default function DIDs() {
   });
 
   const visibleOrderRows = useMemo(() => {
-    if (tab === 'free') return freeItems;
     if (tab === 'search') return searchResults ?? [];
     if (tab === 'tollfree') return tollResults ?? [];
     return [];
-  }, [tab, freeItems, searchResults, tollResults]);
+  }, [tab, searchResults, tollResults]);
 
   const orderSelected = async () => {
     const numbers = [...selected];
@@ -181,7 +169,6 @@ export default function DIDs() {
       setActionMsg(`Ordered ${numbers.length} number(s) successfully.`);
       setSelected(new Set());
       mine.refetch();
-      free.refetch();
       if (searchResults) await runLocalSearch();
       if (tollResults) await runTollFreeSearch();
     } catch (err) {
@@ -288,7 +275,6 @@ export default function DIDs() {
           type="button"
           onClick={() => {
             mine.refetch();
-            free.refetch();
             setActionMsg('Refreshed.');
             setTimeout(() => setActionMsg(''), 2000);
           }}
@@ -300,12 +286,7 @@ export default function DIDs() {
 
       <div className="flex flex-wrap gap-2 border-b border-slate-200">
         {PAGE_TABS.map(({ id, label }) => {
-          const count =
-            id === 'mine' && mineItems.length
-              ? ` (${mineItems.length})`
-              : id === 'free' && freeItems.length
-                ? ` (${freeItems.length})`
-                : '';
+          const count = id === 'mine' && mineItems.length ? ` (${mineItems.length})` : '';
           return (
             <button
               key={id}
@@ -363,27 +344,6 @@ export default function DIDs() {
                 columns={mineColumns}
                 rows={mineItems}
                 emptyMessage="No DIDs on your account yet."
-              />
-            </>
-          )}
-        </section>
-      )}
-
-      {tab === 'free' && (
-        <section className="space-y-4">
-          {renderOrderToolbar()}
-          {free.loading && !free.data ? (
-            <PageLoading label="Loading available DIDs…" />
-          ) : free.error ? (
-            <PageError message={free.error} onRetry={free.refetch} />
-          ) : (
-            <>
-              <p className="text-sm text-slate-500">Numbers currently available for your account.</p>
-              {freeItems.length === 0 && noInventoryHint}
-              <DataTable
-                columns={[buyColumn(freeItems), ...FREE_COLS]}
-                rows={freeItems}
-                emptyMessage="No numbers available right now."
               />
             </>
           )}
