@@ -44,7 +44,7 @@ export function enrichTrunkRow(trunk) {
   };
 }
 
-/** Payload for PATCH /home/client/egress_trunk/{id} ip array. */
+/** Payload for PATCH /home/client/ingress_trunk|egress_trunk/{id} ip array. */
 export function hostsToApiPayload(hosts) {
   return (hosts ?? [])
     .map((entry) => {

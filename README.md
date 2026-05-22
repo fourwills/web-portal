@@ -94,17 +94,20 @@ Vercel is only hosting the **frontend**; all data still comes from your DNL API 
 |---------|-----|
 | Account | Profile, API keys, **platform IPs** (`VITE_PLATFORM_IPS`), default IPs |
 | Billing | Invoices; Stripe (card number + expiry → `POST /home/client/payment`, same as [classic portal](https://portal.incorpus.in/#/clients/billing/online_payment)); PayPal SDK |
-| Trunks | Registered host IPs from trunk `ip[]`; routing via `/home/client/trunk/{id}/prefix/list`; ingress/egress lists |
+| Trunks | Ingress/egress lists; **Edit IPs** on both trunk types; registered IPs; routing |
 | Rates | Primary: trunk routing (`rate_table_name`, `tech_prefix`); fallback global `rate_table/list`, `rate/list`; CSV export (API or client-side) |
 | DIDs | `did/list`, release, `did_api/search_local`, `did_api/order_local` (see [CONFIGURATION.md](./CONFIGURATION.md)) |
 
 ## Configuration
 
-See **[CONFIGURATION.md](./CONFIGURATION.md)** for:
+See **[CONFIGURATION.md](./CONFIGURATION.md)** — full guide for operators and clients:
 
-- Changing **API base URL** (`.env`, Vercel env vars, `vercel.json`)
-- Changing **platform IPs** (`VITE_PLATFORM_IPS`)
-- **Client egress IPs** (Trunks → Edit IP in the portal)
+| Change | How |
+|--------|-----|
+| **API base URL** | `VITE_API_BASE_URL` in `.env` / `.env.production` / `.env.hostverge` or Vercel env; then rebuild |
+| **Platform IPs** (all clients) | `VITE_PLATFORM_IPS` at build → Account → Our platform IPs |
+| **Client trunk IPs** | Portal → Trunks → **Edit IPs** on ingress or egress (live API, no redeploy) |
+| **Default IPs** | DNL admin only → Account → Your default IPs |
 
 **Swagger (API reference, not a runtime dependency):**
 

@@ -158,10 +158,10 @@ Whenever you change code or env (API URL, platform IPs):
 
 | What | Where |
 |------|--------|
-| API base URL at build | `.env.hostverge` → `npm run build:hostverge` |
+| API base URL at build | `.env.hostverge` → `VITE_API_BASE_URL` → `npm run build:hostverge` |
 | Platform IPs at build | `.env.hostverge` → `VITE_PLATFORM_IPS` |
-| Client egress IPs | Portal → **Trunks** → **Edit IP** (API, not env) |
-| Full config guide | [CONFIGURATION.md](./CONFIGURATION.md) |
+| Client trunk IPs (ingress/egress) | Portal → **Trunks** → **Edit IPs** (live API; no redeploy) |
+| Full guide (API URL, all IP types, Vercel vs Hostverge) | [CONFIGURATION.md](./CONFIGURATION.md) |
 
 ---
 
