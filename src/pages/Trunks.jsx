@@ -5,68 +5,34 @@ import DataTable from '../components/UI/DataTable';
 import ErrorBanner from '../components/UI/ErrorBanner';
 import { PageError, PageLoading } from '../components/UI/PageState';
 import EgressIpEditorModal from '../components/Trunks/EgressIpEditorModal';
-import { rowsToColumns } from '../utils/tableColumns';
 import { enrichTrunkRow } from '../utils/trunkHosts';
 import { isMockMode } from '../utils/apiHelpers';
 
-const ROUTING_PREF = ['trunk_name', 'tech_prefix', 'rate_table_name', 'product_name', 'code', 'trunk_id'];
-
-const INGRESS_COLS = [
-  { key: 'trunk_name', label: 'Trunk name' },
-  { key: 'client_ip', label: 'Your registered IP(s)' },
-  { key: 'client_ports', label: 'Port(s)' },
-  { key: 'is_active', label: 'Active', render: (r) => (r.is_active ? 'Yes' : 'No') },
-  { key: 'call_limit', label: 'Call limit' },
-  { key: 'cps_limit', label: 'CPS limit' },
+const HOST_COLS_BASE = [
+  { key: 'trunk_name', label: 'Trunk' },
+  { key: 'ip', label: 'Your IP' },
+  { key: 'port', label: 'Port' },
+  { key: 'addr_type', label: 'Type' },
 ];
 
 function egressColumns(onEdit) {
   return [
-    { key: 'trunk_name', label: 'Trunk name' },
-    { key: 'client_ip', label: 'Your registered IP(s)' },
-    { key: 'client_ports', label: 'Port(s)' },
-    { key: 'trunk_type2', label: 'Trunk type' },
-    { key: 'auth_type', label: 'Auth' },
+    { key: 'trunk_name', label: 'Egress trunk' },
+    { key: 'client_ip', label: 'Your registered IP' },
+    { key: 'client_ports', label: 'Port' },
     { key: 'is_active', label: 'Active', render: (r) => (r.is_active ? 'Yes' : 'No') },
     {
       key: '_edit',
-      label: '',
+      label: 'Action',
       render: (row) => (
         <button
           type="button"
           onClick={() => onEdit(row)}
           className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-sky-700 hover:bg-sky-50"
         >
-          Edit IPs
+          Edit IP
         </button>
       ),
-    },
-  ];
-}
-
-function hostColumns(onEdit) {
-  return [
-    { key: 'trunk_name', label: 'Trunk' },
-    { key: 'direction', label: 'Direction' },
-    { key: 'ip', label: 'Your registered IP' },
-    { key: 'port', label: 'Port' },
-    { key: 'addr_type', label: 'Type' },
-    { key: 'trunk_type2', label: 'Trunk type' },
-    {
-      key: '_edit',
-      label: '',
-      render: (row) =>
-        row.direction === 'Egress' ? (
-          <button
-            type="button"
-            onClick={() => onEdit(row)}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-sky-700 hover:bg-sky-50"
-          >
-            Edit
-          </button>
-        ) : (
-          '—'
-        ),
     },
   ];
 }
@@ -79,18 +45,9 @@ export default function Trunks() {
   const [actionError, setActionError] = useState('');
 
   const hosts = useApi(() => trunkService.getClientRegisteredIps(), []);
-  const routing = useApi(() => trunkService.getTrunkRouting(), []);
-  const ingress = useApi(() => trunkService.getIngressTrunks({ per_page: 50 }), []);
   const egress = useApi(() => trunkService.getEgressTrunks({ per_page: 50 }), []);
 
-  const hostItems = hosts.data?.items ?? [];
-  const routingItems = routing.data?.items ?? [];
-  const routingCols = rowsToColumns(routingItems, ROUTING_PREF);
-
-  const ingressRows = useMemo(
-    () => (ingress.data?.items ?? []).map(enrichTrunkRow),
-    [ingress.data],
-  );
+  const hostItems = (hosts.data?.items ?? []).filter((r) => r.direction === 'Egress');
   const egressRows = useMemo(
     () => (egress.data?.items ?? []).map(enrichTrunkRow),
     [egress.data],
@@ -122,25 +79,41 @@ export default function Trunks() {
     }
   };
 
-  const handleSaveIps = async (resourceId, hosts) => {
+  const handleSaveIps = async (resourceId, hostList) => {
     setSavingIps(true);
     setActionError('');
     setActionMsg('');
     try {
-      await trunkService.updateEgressTrunkHosts(resourceId, hosts);
-      setActionMsg('Registered IPs updated.');
+      await trunkService.updateEgressTrunkHosts(resourceId, hostList);
+      setActionMsg('Your egress IP has been updated.');
       setEditTrunk(null);
       egress.refetch();
       hosts.refetch();
     } catch (err) {
-      setActionError(err.response?.data?.error?.message ?? err.message ?? 'Failed to update IPs');
+      setActionError(err.response?.data?.error?.message ?? err.message ?? 'Failed to update IP');
     } finally {
       setSavingIps(false);
     }
   };
 
+  const hostCols = [
+    ...HOST_COLS_BASE,
+    {
+      key: '_edit',
+      label: 'Action',
+      render: (row) => (
+        <button
+          type="button"
+          onClick={() => openEdit(row)}
+          className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-sky-700 hover:bg-sky-50"
+        >
+          Edit IP
+        </button>
+      ),
+    },
+  ];
+
   const egressCols = egressColumns(openEdit);
-  const hostCols = hostColumns(openEdit);
 
   return (
     <div className="space-y-6">
@@ -151,8 +124,8 @@ export default function Trunks() {
       )}
 
       <p className="text-sm text-slate-600">
-        For DID origination, register <strong>your IP address</strong> on the egress trunk. Use{' '}
-        <strong>Edit IPs</strong> to update authorized hosts from this portal.
+        Your <strong>egress trunk IP</strong> is the address you send DID traffic from. Update it here when your public
+        IP changes.
       </p>
 
       <ErrorBanner message={actionError} />
@@ -168,10 +141,8 @@ export default function Trunks() {
 
       <div className="flex flex-wrap gap-2 border-b border-slate-200">
         {[
-          { id: 'egress', label: 'Egress trunks' },
+          { id: 'egress', label: 'Egress trunk' },
           { id: 'hosts', label: 'Registered IPs' },
-          { id: 'ingress', label: 'Ingress trunks' },
-          { id: 'routing', label: 'Routing & rates' },
         ].map(({ id, label }) => (
           <button
             key={id}
@@ -189,6 +160,27 @@ export default function Trunks() {
         ))}
       </div>
 
+      {tab === 'egress' && (
+        egress.loading && !egress.data ? (
+          <PageLoading label="Loading egress trunk…" />
+        ) : egress.error ? (
+          <PageError message={egress.error} onRetry={egress.refetch} />
+        ) : (
+          <>
+            {egressRows.some((r) => r.client_ip === '—') && egressRows.length > 0 && (
+              <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">
+                No IP registered yet. Click <strong>Edit IP</strong> to add your public IP for DID traffic.
+              </p>
+            )}
+            <DataTable
+              columns={egressCols}
+              rows={egressRows}
+              emptyMessage="No egress trunk found on your account."
+            />
+          </>
+        )
+      )}
+
       {tab === 'hosts' && (
         hosts.loading && !hosts.data ? (
           <PageLoading label="Loading registered IPs…" />
@@ -198,58 +190,8 @@ export default function Trunks() {
           <DataTable
             columns={hostCols}
             rows={hostItems}
-            emptyMessage="No host IPs registered on your egress trunk yet. Use Edit IPs on the egress trunk tab to add your public IP."
+            emptyMessage="No egress IP registered yet. Use Edit IP on the Egress trunk tab."
           />
-        )
-      )}
-
-      {tab === 'routing' && (
-        routing.loading && !routing.data ? (
-          <PageLoading label="Loading trunk routing…" />
-        ) : routing.error ? (
-          <PageError message={routing.error} onRetry={routing.refetch} />
-        ) : (
-          <DataTable
-            columns={routingCols.length ? routingCols : [{ key: 'trunk_name', label: 'Trunk' }]}
-            rows={routingItems}
-            emptyMessage="No routing / rate table assignments on ingress trunks."
-          />
-        )
-      )}
-
-      {tab === 'ingress' && (
-        ingress.loading && !ingress.data ? (
-          <PageLoading label="Loading ingress trunks…" />
-        ) : ingress.error ? (
-          <PageError message={ingress.error} onRetry={ingress.refetch} />
-        ) : (
-          <DataTable
-            columns={INGRESS_COLS}
-            rows={ingressRows}
-            emptyMessage="No ingress trunks found."
-          />
-        )
-      )}
-
-      {tab === 'egress' && (
-        egress.loading && !egress.data ? (
-          <PageLoading label="Loading egress trunks…" />
-        ) : egress.error ? (
-          <PageError message={egress.error} onRetry={egress.refetch} />
-        ) : (
-          <>
-            {egressRows.some((r) => r.client_ip === '—') && egressRows.length > 0 && (
-              <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">
-                No registered IP on this egress trunk yet. Click <strong>Edit IPs</strong> to add your public IP for
-                DID traffic.
-              </p>
-            )}
-            <DataTable
-              columns={egressCols}
-              rows={egressRows}
-              emptyMessage="No egress trunks found."
-            />
-          </>
         )
       )}
     </div>
