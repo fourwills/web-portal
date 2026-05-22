@@ -10,9 +10,9 @@ const api = axios.create({
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('auth_token');
+  // Swagger security scheme "auth_token" → header name X-Auth-Token (not Bearer)
   if (token && token !== 'dev-mock-token') {
-    config.headers.Authorization = `Bearer ${token}`;
-    config.headers['Auth-Token'] = token;
+    config.headers['X-Auth-Token'] = token;
   }
   return config;
 });

@@ -13,6 +13,16 @@
 
 Not `username` — the API returns a validation error if `email_or_name` is missing.
 
+## Authenticated requests
+
+After login, send the token on **every** ClientPortal request:
+
+```
+X-Auth-Token: <token from POST /auth response payload.token>
+```
+
+This is defined in Swagger under `securityDefinitions.auth_token`. `Authorization: Bearer` does **not** work.
+
 ## Dev mock (UI development without API)
 
 When `VITE_DEV_MOCK_AUTH=true` in `.env`:

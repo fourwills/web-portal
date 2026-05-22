@@ -13,6 +13,7 @@ If PowerShell says **running scripts is disabled** when you run `npm`, use **`np
 If `npm` is not recognized or `nvm use` shows **Access is denied**, run once in PowerShell:
 
 ```powershell
+cd e:\Development\Projects\WebPortal\client-portal
 .\scripts\setup-env.ps1
 ```
 
@@ -29,6 +30,7 @@ This script:
 PowerShell may block `npm` (execution policy). Use **`npm.cmd`** or the helper scripts:
 
 ```powershell
+cd e:\Development\Projects\WebPortal\client-portal
 npm.cmd install
 npm.cmd run dev
 ```
@@ -49,7 +51,21 @@ npm.cmd run test
 
 Open **http://localhost:5174** (dev server uses port 5174 by default; if busy, Vite picks the next free port and prints it in the terminal)
 
-**Dev login** (mock mode, see `.env`): `demo` / `demo`
+**Production login:** use client credentials on the login page (no demo account when `VITE_DEV_MOCK_AUTH=false`).
+
+## Deploy on Vercel
+
+1. Set the project **Root Directory** to `client-portal` (if the repo root is `WebPortal`).
+2. In Vercel → **Settings → Environment Variables**, add:
+
+| Name | Value |
+|------|--------|
+| `VITE_API_BASE_URL` | `https://portal.incorpus.in/api_dnl/v1` |
+| `VITE_DEV_MOCK_AUTH` | `false` |
+
+3. Redeploy after changing env vars (Vite bakes them in at build time).
+
+CORS on the production API already allows `https://web-portal-azure.vercel.app`.
 
 ## Configuration
 
@@ -57,12 +73,27 @@ Copy `.env.example` to `.env`:
 
 ```
 VITE_API_BASE_URL=https://portal.incorpus.in/api_dnl/v1
-VITE_DEV_MOCK_AUTH=true
+VITE_DEV_MOCK_AUTH=false
 ```
 
 Change `VITE_API_BASE_URL` to point at any server — no code changes needed.
 
-See `TEST_CREDENTIALS.md` for API login field names and real test accounts.
+**Swagger (API reference, not a runtime dependency):**
+
+- Production: `https://portal.incorpus.in/api_dnl/v1/swagger.json`
+- Dev/staging: `https://v6dev.denovolab.com/api_dnl/v1/swagger.json` (separate server; credentials may differ)
+
+Swagger documents paths, request bodies, and the `X-Auth-Token` header. The portal does not load swagger at runtime.
+
+See `TEST_CREDENTIALS.md` for API login field names.
+
+### Live API smoke test
+
+```powershell
+$env:TEST_USER='your_username'
+$env:TEST_PASS='your_password'
+npm.cmd run test
+```
 
 ## Build
 
