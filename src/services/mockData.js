@@ -43,10 +43,6 @@ export const mockIngressTrunks = {
   per_page: 10,
 };
 
-export const mockClientRegisteredIps = [
-  { trunk_id: 205, trunk_name: 'AMS', direction: 'Ingress', ip: '88.99.103.106', port: 5060, addr_type: 'ip', fqdn: '—' },
-];
-
 export const mockTrunkRouting = [
   {
     trunk_id: 205,
@@ -62,16 +58,33 @@ export const mockEgressTrunks = {
   items: [
     {
       resource_id: 310,
-      egress_name: 'Demo Egress',
+      trunk_id: 310,
+      trunk_name: 'Demo Egress',
       is_active: true,
-      rate_table_name: 'Outbound',
+      trunk_type2: 'DID Traffic',
+      auth_type: 'Authorized by Host Only',
       call_limit: 200,
+      ip: [{ ip: '203.0.113.50', port: 5060, addr_type: 'ip' }],
     },
   ],
   total: 1,
   page: 0,
   per_page: 10,
 };
+
+export const mockClientRegisteredIps = [
+  { trunk_id: 205, trunk_name: 'AMS', direction: 'Ingress', ip: '88.99.103.106', port: 5060, addr_type: 'ip', fqdn: '—', trunk_type2: '—' },
+  {
+    trunk_id: 310,
+    trunk_name: 'Demo Egress',
+    direction: 'Egress',
+    ip: '203.0.113.50',
+    port: 5060,
+    addr_type: 'ip',
+    fqdn: '—',
+    trunk_type2: 'DID Traffic',
+  },
+];
 
 export const mockRateTables = {
   items: [
