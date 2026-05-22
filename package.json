@@ -9,6 +9,7 @@
     "build:hostverge": "node ./scripts/build-hostverge.mjs",
     "package:hostverge": "powershell -ExecutionPolicy Bypass -File ./scripts/package-hostverge.ps1",
     "deploy:hostverge": "node ./scripts/build-hostverge.mjs && powershell -ExecutionPolicy Bypass -File ./scripts/deploy-hostverge.ps1",
+    "docs:pdf": "node ./scripts/generate-docs-pdf.mjs",
     "build:vercel": "node ./scripts/validate-env.mjs && vite build",
     "preview": "vite preview",
     "setup": "powershell -ExecutionPolicy Bypass -File ./scripts/setup-env.ps1",
@@ -25,6 +26,8 @@
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.7",
     "@vitejs/plugin-react": "^4.5.0",
+    "marked": "^15.0.12",
+    "puppeteer-core": "^24.2.0",
     "tailwindcss": "^4.1.7",
     "vite": "^6.3.5"
   }

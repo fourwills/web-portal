@@ -1,6 +1,7 @@
 node_modules
 dist
 hostverge-upload.zip
+docs/configuration-guide.html
 .env
 .env.local
 *.log
