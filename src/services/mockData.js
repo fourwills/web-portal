@@ -27,6 +27,82 @@ export const mockPayments = {
   per_page: 10,
 };
 
+export const mockIngressTrunks = {
+  items: [
+    {
+      resource_id: 205,
+      ingress_name: 'Demo Ingress',
+      is_active: true,
+      rate_table_name: 'Standard',
+      call_limit: 100,
+      cps_limit: 50,
+    },
+  ],
+  total: 1,
+  page: 0,
+  per_page: 10,
+};
+
+export const mockEgressTrunks = {
+  items: [
+    {
+      resource_id: 310,
+      egress_name: 'Demo Egress',
+      is_active: true,
+      rate_table_name: 'Outbound',
+      call_limit: 200,
+    },
+  ],
+  total: 1,
+  page: 0,
+  per_page: 10,
+};
+
+export const mockRateTables = {
+  items: [
+    { id: 1, name: 'US Termination', currency: 'USD', effective_date: '2026-01-01' },
+    { id: 2, name: 'EU Termination', currency: 'EUR', effective_date: '2026-02-01' },
+  ],
+  total: 2,
+  page: 0,
+  per_page: 10,
+};
+
+export const mockRates = {
+  items: [
+    { code: '1', description: 'USA', rate: 0.012, interval: 6 },
+    { code: '44', description: 'UK', rate: 0.018, interval: 6 },
+  ],
+  total: 2,
+  page: 0,
+  per_page: 10,
+};
+
+export const mockDids = {
+  items: [
+    { id: 1, did: '+12025550100', state: 'DC', status: 'active', country: 'US' },
+  ],
+  total: 1,
+  page: 0,
+  per_page: 10,
+};
+
+export const mockFreeDids = {
+  items: [
+    {
+      id: 101,
+      did: '+12025550999',
+      state: 'DC',
+      country: 'US',
+      buy_billing_plan_id: 1,
+      rate_type: 'flat',
+    },
+  ],
+  total: 1,
+  page: 0,
+  per_page: 10,
+};
+
 export const mockInvoices = {
   items: [
     { id: 501, invoice_number: 'INV-2026-0501', amount: 1500, status: 'paid', invoice_time: '2026-05-01T00:00:00Z' },

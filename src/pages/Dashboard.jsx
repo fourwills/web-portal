@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { User, ArrowLeftRight, Receipt } from 'lucide-react';
+import { User, ArrowLeftRight, Receipt, Network, Table2, Phone } from 'lucide-react';
 import { accountService } from '../services/accountService';
 import { transactionService } from '../services/transactionService';
 import { billingService } from '../services/billingService';
@@ -12,7 +12,10 @@ import { formatDateTime, formatMoney, isMockMode } from '../utils/apiHelpers';
 const cards = [
   { to: '/account', title: 'Account', description: 'Profile, API keys, and account settings', icon: User, color: 'bg-sky-50 text-sky-700' },
   { to: '/transactions', title: 'Transactions', description: 'Payments and transaction history', icon: ArrowLeftRight, color: 'bg-emerald-50 text-emerald-700' },
-  { to: '/billing', title: 'Billing', description: 'Invoices and balance overview', icon: Receipt, color: 'bg-amber-50 text-amber-700' },
+  { to: '/billing', title: 'Billing', description: 'Invoices, payments, PayPal/Stripe', icon: Receipt, color: 'bg-amber-50 text-amber-700' },
+  { to: '/trunks', title: 'Trunks', description: 'Ingress and egress trunks', icon: Network, color: 'bg-violet-50 text-violet-700' },
+  { to: '/rates', title: 'Rates', description: 'Rate tables and CSV download', icon: Table2, color: 'bg-rose-50 text-rose-700' },
+  { to: '/dids', title: 'DIDs', description: 'View, search, and order DIDs', icon: Phone, color: 'bg-teal-50 text-teal-700' },
 ];
 
 const paymentColumns = [

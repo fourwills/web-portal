@@ -6,6 +6,9 @@ import Dashboard from './pages/Dashboard';
 import Account from './pages/Account';
 import Transactions from './pages/Transactions';
 import Billing from './pages/Billing';
+import Trunks from './pages/Trunks';
+import Rates from './pages/Rates';
+import DIDs from './pages/DIDs';
 
 export default function App() {
   return (
@@ -18,6 +21,9 @@ export default function App() {
             <Route path="/account" element={<Account />} />
             <Route path="/transactions" element={<Transactions />} />
             <Route path="/billing" element={<Billing />} />
+            <Route path="/trunks" element={<Trunks />} />
+            <Route path="/rates" element={<Rates />} />
+            <Route path="/dids" element={<DIDs />} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

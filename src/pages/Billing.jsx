@@ -5,6 +5,7 @@ import DataTable from '../components/UI/DataTable';
 import StatCard from '../components/UI/StatCard';
 import { PageError, PageLoading } from '../components/UI/PageState';
 import { formatDateTime, formatMoney, isMockMode } from '../utils/apiHelpers';
+import PaymentSection from '../components/Billing/PaymentSection';
 
 function StatusBadge({ status }) {
   const s = String(status ?? '').toLowerCase();
@@ -60,6 +61,8 @@ export default function Billing() {
           Demo billing data.
         </p>
       )}
+
+      <PaymentSection />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard label="Current balance" value={formatMoney(balance, currency)} accent="emerald" />

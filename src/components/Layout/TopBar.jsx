@@ -7,6 +7,9 @@ const titles = {
   '/account': 'Account',
   '/transactions': 'Transactions',
   '/billing': 'Billing',
+  '/trunks': 'Trunks',
+  '/rates': 'Rates',
+  '/dids': 'DIDs',
 };
 
 export default function TopBar({ onMenuClick }) {
