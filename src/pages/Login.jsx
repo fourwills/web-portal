@@ -4,6 +4,7 @@ import { Eye, EyeOff, LogIn } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import ErrorBanner from '../components/UI/ErrorBanner';
 import LoadingSpinner from '../components/UI/LoadingSpinner';
+import { BrandLogo } from '../components/UI/BrandLogo';
 
 const MOCK_HINT = import.meta.env.VITE_DEV_MOCK_AUTH === 'true';
 
@@ -62,9 +63,7 @@ export default function Login() {
     <div className="flex min-h-screen items-center justify-center bg-slate-900 p-4">
       <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-slate-900 text-lg font-bold text-sky-400">
-            CP
-          </div>
+          <BrandLogo className="mx-auto mb-4 h-14 w-auto max-w-[220px] object-contain" />
           <h1 className="text-2xl font-semibold text-slate-900">Client Portal</h1>
           <p className="mt-1 text-sm text-slate-500">Sign in with your account</p>
         </div>
@@ -116,7 +115,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={submitting}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 font-medium text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-orange-500 px-4 py-2.5 font-medium text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? (
               <LoadingSpinner label="Signing in…" />
