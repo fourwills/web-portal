@@ -31,17 +31,32 @@ export const mockIngressTrunks = {
   items: [
     {
       resource_id: 205,
-      ingress_name: 'Demo Ingress',
+      trunk_id: 205,
+      trunk_name: 'AMS',
       is_active: true,
-      rate_table_name: 'Standard',
       call_limit: 100,
-      cps_limit: 50,
+      ip: [{ ip: '88.99.103.106', port: 5060, addr_type: 'ip' }],
     },
   ],
   total: 1,
   page: 0,
   per_page: 10,
 };
+
+export const mockClientRegisteredIps = [
+  { trunk_id: 205, trunk_name: 'AMS', direction: 'Ingress', ip: '88.99.103.106', port: 5060, addr_type: 'ip', fqdn: '—' },
+];
+
+export const mockTrunkRouting = [
+  {
+    trunk_id: 205,
+    trunk_name: 'AMS',
+    tech_prefix: '230426',
+    rate_table_name: 'USA_Flat_00075_Client',
+    product_name: null,
+    code: null,
+  },
+];
 
 export const mockEgressTrunks = {
   items: [

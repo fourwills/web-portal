@@ -7,8 +7,14 @@ export const billingService = {
     if (isMockMode()) return mockFinance;
     const res = await api.get('/home/client/actual_finance_history');
     const payload = unwrapPayload(res.data);
-    if (Array.isArray(payload)) return payload[0] ?? payload;
-    return payload;
+    const row = Array.isArray(payload) ? payload[0] : payload;
+    if (!row) return null;
+    return {
+      ...row,
+      balance: row.balance ?? row.actual_balance ?? row.actual_balance_total,
+      credit: row.credit ?? row.credit_limit,
+      currency: row.currency ?? 'USD',
+    };
   },
 
   getInvoices: async (params = {}) => {
