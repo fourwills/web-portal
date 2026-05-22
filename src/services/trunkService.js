@@ -1,6 +1,6 @@
 import api from '../config/api';
-import { isMockMode, unwrapList } from '../utils/apiHelpers';
-import { flattenTrunkHosts } from '../utils/trunkHosts';
+import { isMockMode, unwrapList, unwrapPayload } from '../utils/apiHelpers';
+import { flattenTrunkHosts, hostsToApiPayload } from '../utils/trunkHosts';
 import {
   mockClientRegisteredIps,
   mockEgressTrunks,
@@ -19,6 +19,25 @@ export const trunkService = {
     if (isMockMode()) return mockEgressTrunks;
     const res = await api.get('/home/client/egress_trunk/list', { params });
     return unwrapList(res.data);
+  },
+
+  getEgressTrunk: async (resourceId) => {
+    if (isMockMode()) {
+      const item = mockEgressTrunks.items.find(
+        (t) => String(t.resource_id) === String(resourceId) || String(t.trunk_id) === String(resourceId),
+      );
+      return item ?? mockEgressTrunks.items[0];
+    }
+    const res = await api.get(`/home/client/egress_trunk/${resourceId}`);
+    return unwrapPayload(res.data);
+  },
+
+  /** Update authorized hosts on egress trunk (client self-service). */
+  updateEgressTrunkHosts: async (resourceId, hosts) => {
+    if (isMockMode()) return { success: true };
+    const ip = hostsToApiPayload(hosts);
+    const res = await api.patch(`/home/client/egress_trunk/${resourceId}`, { ip });
+    return unwrapPayload(res.data) ?? res.data;
   },
 
   /** All resource IPs registered on the client account (egress hosts for DID). */

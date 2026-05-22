@@ -13,6 +13,8 @@ export function extractTrunkHostEntries(trunk) {
         port: entry.port ?? 5060,
         addr_type: entry.addr_type ?? 'ip',
         fqdn: entry.fqdn ?? null,
+        resource_ip_id: entry.resource_ip_id ?? null,
+        direction: entry.direction ?? null,
         trunk_type2: entry.trunk_type2 ?? trunk?.trunk_type2 ?? null,
       };
     })
@@ -40,6 +42,25 @@ export function enrichTrunkRow(trunk) {
     client_ip_count: hosts.length,
     client_ports: [...new Set(hosts.map((h) => h.port).filter((p) => p != null))].join(', ') || '—',
   };
+}
+
+/** Payload for PATCH /home/client/egress_trunk/{id} ip array. */
+export function hostsToApiPayload(hosts) {
+  return (hosts ?? [])
+    .map((entry) => {
+      const ip = String(entry.ip ?? '').trim();
+      if (!ip) return null;
+      const out = {
+        ip,
+        port: Number(entry.port) || 5060,
+        addr_type: entry.addr_type ?? 'ip',
+        fqdn: entry.fqdn || null,
+      };
+      if (entry.resource_ip_id != null) out.resource_ip_id = entry.resource_ip_id;
+      if (entry.direction != null) out.direction = entry.direction;
+      return out;
+    })
+    .filter(Boolean);
 }
 
 export function flattenTrunkHosts(trunks, direction) {

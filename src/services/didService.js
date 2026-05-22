@@ -109,6 +109,49 @@ export const didService = {
     const res = await api.post('/did_api/order_toll_free', { items });
     return unwrapPayload(res.data) ?? res.data;
   },
+
+  /** Release DID from account — POST /did_api/release */
+  releaseDid: async (row) => {
+    if (isMockMode()) return { success: true };
+    const number = normalizeDidNumber(row);
+    const res = await api.post('/did_api/release', {
+      items: [{ number }],
+    });
+    return unwrapPayload(res.data) ?? res.data;
+  },
+
+  /** Fallback when release API fails on some accounts */
+  disableDid: async (row) => {
+    if (isMockMode()) return { success: true };
+    const id = row.id ?? row.did_id;
+    if (!id) throw new Error('Cannot disable: missing DID id.');
+    const res = await api.patch(`/home/client/did/${id}/disable`);
+    return unwrapPayload(res.data) ?? res.data;
+  },
+
+  /**
+   * Release, then disable if release fails (e.g. go2dial server config).
+   * Returns { method: 'release' | 'disable' }.
+   */
+  releaseOrDisableDid: async (row) => {
+    if (isMockMode()) return { success: true, method: 'release' };
+    try {
+      await didService.releaseDid(row);
+      return { success: true, method: 'release' };
+    } catch (releaseErr) {
+      if (!row.id && !row.did_id) throw releaseErr;
+      try {
+        await didService.disableDid(row);
+        return {
+          success: true,
+          method: 'disable',
+          releaseError: releaseErr.response?.data?.error?.message ?? releaseErr.message,
+        };
+      } catch {
+        throw releaseErr;
+      }
+    }
+  },
 };
 
 export { normalizeDidNumber };
