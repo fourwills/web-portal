@@ -15,7 +15,7 @@ const cards = [
   { to: '/billing', title: 'Billing', description: 'Invoices, payments, PayPal/Stripe', icon: Receipt, color: 'bg-amber-50 text-amber-700' },
   { to: '/trunks', title: 'Trunks', description: 'Ingress, egress, routing, and registered IPs', icon: Network, color: 'bg-violet-50 text-violet-700' },
   { to: '/rates', title: 'Rates', description: 'Rate tables and CSV download', icon: Table2, color: 'bg-rose-50 text-rose-700' },
-  { to: '/dids', title: 'DIDs', description: 'Your numbers and release unused DIDs', icon: Phone, color: 'bg-teal-50 text-teal-700' },
+  { to: '/dids', title: 'DIDs', description: 'My numbers, search, and release', icon: Phone, color: 'bg-teal-50 text-teal-700' },
 ];
 
 const paymentColumns = [
