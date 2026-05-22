@@ -157,7 +157,21 @@ client-portal/
 
 ---
 
-## 5. Vercel deployment reminder
+## 5. Hostverge / cPanel (thevoiptalk.com)
+
+To host on **`https://portal.thevoiptalk.com`** (static upload, no Node on server), follow:
+
+**[DEPLOYMENT_HOSTVERGE.md](./DEPLOYMENT_HOSTVERGE.md)**
+
+```powershell
+npm run build:hostverge
+```
+
+Uses **`.env.hostverge`** (full API URL). `vercel.json` rewrites do not apply on shared hosting.
+
+---
+
+## 6. Vercel deployment reminder
 
 1. Repository root may be `WebPortal`; set Vercel **Root Directory** to **`client-portal`**.
 2. Set or confirm environment variables, then **Redeploy**.
@@ -168,7 +182,7 @@ For API documentation (paths, auth header), see Swagger:
 
 ---
 
-## 6. Support contacts (typical workflow)
+## 7. Support contacts (typical workflow)
 
 | Task | Action |
 |------|--------|

@@ -2,7 +2,8 @@
 
 Responsive client portal for the DNL API (`ClientPortal` + `Auth` endpoints).
 
-**Operations guide (API URL, platform IPs, client egress IPs):** see **[CONFIGURATION.md](./CONFIGURATION.md)**.
+**Operations guide (API URL, platform IPs, client egress IPs):** see **[CONFIGURATION.md](./CONFIGURATION.md)**.  
+**Host on Hostverge (`portal.thevoiptalk.com`):** `npm run build:hostverge` → upload `dist/` — see **[DEPLOYMENT_HOSTVERGE.md](./DEPLOYMENT_HOSTVERGE.md)**.
 
 ## Prerequisites
 
