@@ -11,6 +11,7 @@ import {
   Phone,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { BrandIcon, BrandLogo } from '../UI/BrandLogo';
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -26,7 +27,7 @@ function linkClass({ isActive }) {
   return [
     'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition',
     isActive
-      ? 'bg-sky-600 text-white'
+      ? 'bg-orange-500 text-white'
       : 'text-slate-300 hover:bg-slate-800 hover:text-white',
   ].join(' ');
 }
@@ -52,11 +53,9 @@ export default function Sidebar({ open, onClose }) {
       ].join(' ')}
     >
       <div className="flex h-16 items-center justify-between border-b border-slate-800 px-4">
-        <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-600 text-sm font-bold">
-            CP
-          </div>
-          <span className="font-semibold tracking-tight">Client Portal</span>
+        <div className="flex min-w-0 items-center gap-2">
+          <BrandIcon className="h-9 w-9 shrink-0 object-contain" />
+          <BrandLogo className="h-8 w-auto max-w-[150px] object-contain object-left" />
         </div>
         <button
           type="button"
