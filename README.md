@@ -56,12 +56,14 @@ Open **http://localhost:5174** (dev server uses port 5174 by default; if busy, V
 ## Deploy on Vercel
 
 1. Set the project **Root Directory** to `client-portal` (if the repo root is `WebPortal`).
-2. In Vercel → **Settings → Environment Variables**, add:
+2. **Optional:** In Vercel → **Settings → Environment Variables**, override defaults:
 
 | Name | Value |
 |------|--------|
 | `VITE_API_BASE_URL` | `https://portal.incorpus.in/api_dnl/v1` |
 | `VITE_DEV_MOCK_AUTH` | `false` |
+
+If these are not set, the build uses committed `.env.production` (same values).
 
 3. Redeploy after changing env vars (Vite bakes them in at build time).
 
