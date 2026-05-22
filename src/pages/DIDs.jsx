@@ -5,6 +5,7 @@ import DataTable from '../components/UI/DataTable';
 import ErrorBanner from '../components/UI/ErrorBanner';
 import { PageError, PageLoading } from '../components/UI/PageState';
 import { formatMoney, isMockMode } from '../utils/apiHelpers';
+import { DID_COUNTRIES, US_STATES } from '../utils/usStates';
 
 const SEARCH_COLS = [
   { key: 'number', label: 'Number', render: (r) => r.number ?? r.did ?? '—' },
@@ -27,19 +28,12 @@ const FREE_COLS = [
 const MINE_COLS = [
   { key: 'did', label: 'Number' },
   { key: 'client_billing_rule_name', label: 'Billing plan' },
-  { key: 'created_at', label: 'Assigned' },
+  { key: 'state', label: 'State' },
+  { key: 'country', label: 'Country' },
+  { key: 'assigned_date', label: 'Assigned' },
 ];
 
-const TOLL_PREFIXES = ['1800', '1888', '1877', '1866', '855', '844', '833'];
-
-function SelectCheckbox({ checked, onChange, label }) {
-  return (
-    <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-slate-700">
-      <input type="checkbox" checked={checked} onChange={onChange} className="rounded border-slate-300" />
-      {label}
-    </label>
-  );
-}
+const TOLL_PREFIXES = ['1800', '1888', '1877', '1866', '1855', '1844', '1833'];
 
 export default function DIDs() {
   const [mainTab, setMainTab] = useState('buy');
@@ -47,14 +41,16 @@ export default function DIDs() {
 
   const mine = useApi(() => didService.getMyDids({ per_page: 100 }), []);
   const free = useApi(() => didService.getFreeDids(), []);
-  const coverage = useApi(() => didService.getCoverageLocal({ country: 'US' }), []);
+  const rules = useApi(() => didService.getBillingRules({ per_page: 100 }), []);
 
+  const [searchCountry, setSearchCountry] = useState('US');
   const [searchState, setSearchState] = useState('');
   const [searchNpa, setSearchNpa] = useState('');
   const [searchLata, setSearchLata] = useState('');
   const [searchPattern, setSearchPattern] = useState('');
   const [searchResults, setSearchResults] = useState(null);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [searchTotal, setSearchTotal] = useState(0);
 
   const [tollPrefix, setTollPrefix] = useState('1800');
   const [tollSuffix, setTollSuffix] = useState('');
@@ -66,11 +62,14 @@ export default function DIDs() {
   const [actionError, setActionError] = useState('');
   const [ordering, setOrdering] = useState(false);
 
-  const coverageStates = useMemo(() => {
-    const items = coverage.data?.items ?? [];
-    const states = [...new Set(items.map((i) => i.state).filter(Boolean))].sort();
-    return states;
-  }, [coverage.data]);
+  const freeItems = free.data?.items ?? [];
+  const mineItems = mine.data?.items ?? [];
+  const ruleItems = rules.data?.items ?? [];
+
+  const billingPlanText = useMemo(() => {
+    if (!ruleItems.length) return '';
+    return ruleItems.map((r) => r.name ?? r.client_billing_rule_name).filter(Boolean).join(', ');
+  }, [ruleItems]);
 
   const toggleSelect = (row) => {
     const num = normalizeDidNumber(row);
@@ -99,15 +98,18 @@ export default function DIDs() {
   const buyColumn = (rows) => ({
     key: '_buy',
     label: (
-      <SelectCheckbox
-        label=""
+      <input
+        type="checkbox"
+        aria-label="Select all"
         checked={rows.length > 0 && rows.every((r) => selected.has(normalizeDidNumber(r)))}
         onChange={(e) => selectAllRows(rows, e.target.checked)}
+        className="rounded border-slate-300"
       />
     ),
     render: (row) => (
       <input
         type="checkbox"
+        aria-label="Select"
         checked={selected.has(normalizeDidNumber(row))}
         onChange={() => toggleSelect(row)}
         className="rounded border-slate-300"
@@ -115,7 +117,14 @@ export default function DIDs() {
     ),
   });
 
-  const orderSelected = async (mode) => {
+  const visibleRowsForBuy = useMemo(() => {
+    if (buyTab === 'free') return freeItems;
+    if (buyTab === 'search') return searchResults ?? [];
+    if (buyTab === 'tollfree') return tollResults ?? [];
+    return [];
+  }, [buyTab, freeItems, searchResults, tollResults]);
+
+  const orderSelected = async () => {
     const numbers = [...selected];
     if (!numbers.length) {
       setActionError('Select at least one number to order.');
@@ -125,14 +134,14 @@ export default function DIDs() {
     setActionError('');
     setActionMsg('');
     try {
-      if (mode === 'tollfree') await didService.orderTollFree(numbers);
+      if (buyTab === 'tollfree') await didService.orderTollFree(numbers);
       else await didService.orderLocal(numbers);
       setActionMsg(`Ordered ${numbers.length} number(s) successfully.`);
       setSelected(new Set());
       mine.refetch();
       free.refetch();
-      if (searchResults) runLocalSearch();
-      if (tollResults) runTollFreeSearch();
+      if (searchResults) await runLocalSearch();
+      if (tollResults) await runTollFreeSearch();
     } catch (err) {
       setActionError(err.response?.data?.error?.message ?? err.message ?? 'Order failed');
     } finally {
@@ -143,9 +152,10 @@ export default function DIDs() {
   const runLocalSearch = async () => {
     setSearchLoading(true);
     setActionError('');
-    setSearchResults(null);
+    setActionMsg('');
     try {
       const result = await didService.searchLocal({
+        country: searchCountry || undefined,
         state: searchState || undefined,
         npa: searchNpa || undefined,
         lata: searchLata || undefined,
@@ -154,8 +164,11 @@ export default function DIDs() {
         page: 0,
       });
       setSearchResults(result.items ?? []);
+      setSearchTotal(result.total ?? result.items?.length ?? 0);
     } catch (err) {
       setActionError(err.response?.data?.error?.message ?? err.message ?? 'Search failed');
+      setSearchResults([]);
+      setSearchTotal(0);
     } finally {
       setSearchLoading(false);
     }
@@ -164,7 +177,7 @@ export default function DIDs() {
   const runTollFreeSearch = async () => {
     setTollLoading(true);
     setActionError('');
-    setTollResults(null);
+    setActionMsg('');
     try {
       const result = await didService.searchTollFree({
         prefix: tollPrefix,
@@ -175,30 +188,49 @@ export default function DIDs() {
       setTollResults(result.items ?? []);
     } catch (err) {
       setActionError(err.response?.data?.error?.message ?? err.message ?? 'Toll-free search failed');
+      setTollResults([]);
     } finally {
       setTollLoading(false);
     }
   };
 
-  const renderBuyToolbar = (orderMode) => (
-    <div className="mb-4 flex flex-wrap items-center gap-3">
-      <button
-        type="button"
-        disabled={ordering || selected.size === 0}
-        onClick={() => orderSelected(orderMode)}
-        className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
-      >
-        {ordering ? 'Ordering…' : `Order selected (${selected.size})`}
-      </button>
-      {selected.size > 0 && (
+  const noInventoryHint = (
+    <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
+      <p className="font-medium">No DIDs available right now.</p>
+      <p className="mt-1 text-sky-800">
+        Your account has these billing plans assigned: <strong>{billingPlanText || '—'}</strong>. If you expect free
+        numbers here, ask your provider to assign DIDs to your free pool (admin → Client → DID Assignment) or load
+        repository inventory for these plans.
+      </p>
+    </div>
+  );
+
+  const renderBuyToolbar = () => (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="text-sm text-slate-600">
+        {visibleRowsForBuy.length > 0
+          ? `${visibleRowsForBuy.length} number${visibleRowsForBuy.length === 1 ? '' : 's'} listed${selected.size ? ` — ${selected.size} selected` : ''}`
+          : 'No numbers listed yet.'}
+      </div>
+      <div className="flex items-center gap-3">
+        {selected.size > 0 && (
+          <button
+            type="button"
+            onClick={() => setSelected(new Set())}
+            className="text-sm text-slate-600 hover:text-slate-900"
+          >
+            Clear ({selected.size})
+          </button>
+        )}
         <button
           type="button"
-          onClick={() => setSelected(new Set())}
-          className="text-sm text-slate-600 hover:text-slate-900"
+          disabled={ordering || selected.size === 0}
+          onClick={orderSelected}
+          className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
         >
-          Clear selection
+          {ordering ? 'Ordering…' : `Order ${selected.size || ''} selected`.trim()}
         </button>
-      )}
+      </div>
     </div>
   );
 
@@ -210,20 +242,39 @@ export default function DIDs() {
         </p>
       )}
 
-      <p className="text-sm text-slate-600">
-        View your numbers or buy new DIDs from the available pool, search, or toll-free inventory (same as the classic
-        client portal Buy DID screen).
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm text-slate-600">
+          View your assigned numbers or buy new DIDs from your free pool, search local inventory, or toll-free
+          (mirrors the classic Buy DID screen).
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            mine.refetch();
+            free.refetch();
+            rules.refetch();
+            setActionMsg('Refreshed.');
+            setTimeout(() => setActionMsg(''), 2000);
+          }}
+          className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+        >
+          Refresh
+        </button>
+      </div>
 
       <div className="flex flex-wrap gap-2 border-b border-slate-200">
         {[
           { id: 'buy', label: 'Buy DIDs' },
-          { id: 'mine', label: 'My DIDs' },
+          { id: 'mine', label: `My DIDs${mineItems.length ? ` (${mineItems.length})` : ''}` },
         ].map(({ id, label }) => (
           <button
             key={id}
             type="button"
-            onClick={() => setMainTab(id)}
+            onClick={() => {
+              setMainTab(id);
+              setActionError('');
+              setActionMsg('');
+            }}
             className={[
               'border-b-2 px-4 py-2 text-sm font-medium transition',
               mainTab === id
@@ -240,7 +291,7 @@ export default function DIDs() {
       {actionMsg && <p className="text-sm text-emerald-700">{actionMsg}</p>}
 
       {mainTab === 'mine' && (
-        <section>
+        <section className="space-y-3">
           {mine.loading && !mine.data ? (
             <PageLoading label="Loading your DIDs…" />
           ) : mine.error ? (
@@ -248,7 +299,7 @@ export default function DIDs() {
           ) : (
             <DataTable
               columns={MINE_COLS}
-              rows={mine.data?.items ?? []}
+              rows={mineItems}
               emptyMessage="No DIDs on your account yet. Use Buy DIDs to order numbers."
             />
           )}
@@ -259,17 +310,24 @@ export default function DIDs() {
         <section className="space-y-4">
           <div className="flex flex-wrap gap-2 border-b border-slate-100">
             {[
-              { id: 'free', label: 'Available to buy' },
+              { id: 'free', label: `Available to buy${freeItems.length ? ` (${freeItems.length})` : ''}` },
               { id: 'search', label: 'Search local' },
               { id: 'tollfree', label: 'Toll-free' },
             ].map(({ id, label }) => (
               <button
                 key={id}
                 type="button"
-                onClick={() => setBuyTab(id)}
+                onClick={() => {
+                  setBuyTab(id);
+                  setSelected(new Set());
+                  setActionError('');
+                  setActionMsg('');
+                }}
                 className={[
-                  'rounded-lg px-3 py-1.5 text-sm font-medium transition',
-                  buyTab === id ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200',
+                  'border-b-2 px-4 py-2 text-sm font-medium transition',
+                  buyTab === id
+                    ? 'border-sky-600 text-sky-700'
+                    : 'border-transparent text-slate-500 hover:text-slate-800',
                 ].join(' ')}
               >
                 {label}
@@ -277,7 +335,7 @@ export default function DIDs() {
             ))}
           </div>
 
-          {renderBuyToolbar(buyTab === 'tollfree' ? 'tollfree' : 'local')}
+          {renderBuyToolbar()}
 
           {buyTab === 'free' && (
             <>
@@ -287,14 +345,15 @@ export default function DIDs() {
                 <PageError message={free.error} onRetry={free.refetch} />
               ) : (
                 <>
-                  <p className="mb-3 text-sm text-slate-500">
-                    Numbers assigned to your account pool with no end date. If this list is empty, use Search local or
-                    Toll-free below.
+                  <p className="text-sm text-slate-500">
+                    Numbers in your free pool (no end date). If empty, try Search local or Toll-free, or ask your
+                    provider to load free DIDs against your billing plans.
                   </p>
+                  {freeItems.length === 0 && noInventoryHint}
                   <DataTable
-                    columns={[buyColumn(free.data?.items ?? []), ...FREE_COLS]}
-                    rows={free.data?.items ?? []}
-                    emptyMessage="No free DIDs in your pool right now. Try Search local or Toll-free."
+                    columns={[buyColumn(freeItems), ...FREE_COLS]}
+                    rows={freeItems}
+                    emptyMessage="No free DIDs in your pool right now."
                   />
                 </>
               )}
@@ -303,79 +362,110 @@ export default function DIDs() {
 
           {buyTab === 'search' && (
             <div className="space-y-4">
-              <div className="flex flex-wrap gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">State</label>
+              <div className="flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <Field label="Country">
+                  <select
+                    value={searchCountry}
+                    onChange={(e) => setSearchCountry(e.target.value)}
+                    className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  >
+                    {DID_COUNTRIES.map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="State">
                   <select
                     value={searchState}
                     onChange={(e) => setSearchState(e.target.value)}
                     className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
                   >
                     <option value="">Any</option>
-                    {coverageStates.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
+                    {US_STATES.map((s) => (
+                      <option key={s.code} value={s.code}>
+                        {s.code} — {s.name}
                       </option>
                     ))}
                   </select>
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">NPA</label>
+                </Field>
+                <Field label="NPA">
                   <input
                     type="text"
+                    inputMode="numeric"
                     placeholder="203"
+                    maxLength={3}
                     value={searchNpa}
-                    onChange={(e) => setSearchNpa(e.target.value)}
+                    onChange={(e) => setSearchNpa(e.target.value.replace(/\D/g, '').slice(0, 3))}
                     className="w-24 rounded-lg border border-slate-300 px-3 py-2 text-sm"
                   />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">LATA</label>
+                </Field>
+                <Field label="LATA">
                   <input
                     type="text"
-                    placeholder="LATA"
+                    inputMode="numeric"
+                    placeholder="Optional"
                     value={searchLata}
-                    onChange={(e) => setSearchLata(e.target.value)}
+                    onChange={(e) => setSearchLata(e.target.value.replace(/\D/g, '').slice(0, 4))}
                     className="w-24 rounded-lg border border-slate-300 px-3 py-2 text-sm"
                   />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">Number pattern (10 digits)</label>
+                </Field>
+                <Field label="Pattern (10 digits)">
                   <input
                     type="text"
+                    inputMode="numeric"
                     placeholder="Optional"
                     maxLength={10}
                     value={searchPattern}
                     onChange={(e) => setSearchPattern(e.target.value.replace(/\D/g, '').slice(0, 10))}
                     className="w-40 rounded-lg border border-slate-300 px-3 py-2 text-sm"
                   />
-                </div>
-                <div className="flex items-end">
+                </Field>
+                <button
+                  type="button"
+                  onClick={runLocalSearch}
+                  disabled={searchLoading}
+                  className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
+                >
+                  {searchLoading ? 'Searching…' : 'Search'}
+                </button>
+                {searchResults && (
                   <button
                     type="button"
-                    onClick={runLocalSearch}
-                    disabled={searchLoading}
-                    className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
+                    onClick={() => {
+                      setSearchResults(null);
+                      setSearchTotal(0);
+                      setSelected(new Set());
+                    }}
+                    className="text-sm text-slate-600 hover:text-slate-900"
                   >
-                    {searchLoading ? 'Searching…' : 'Search'}
+                    Reset
                   </button>
-                </div>
+                )}
               </div>
-              {searchResults && (
-                <DataTable
-                  columns={[buyColumn(searchResults), ...SEARCH_COLS]}
-                  rows={searchResults}
-                  emptyMessage="No numbers found. Try another state or NPA."
-                />
+              {searchResults !== null && (
+                <>
+                  {searchResults.length === 0 && noInventoryHint}
+                  <DataTable
+                    columns={[buyColumn(searchResults), ...SEARCH_COLS]}
+                    rows={searchResults}
+                    emptyMessage="No numbers found for this filter."
+                  />
+                  {searchTotal > searchResults.length && (
+                    <p className="text-xs text-slate-500">
+                      Showing {searchResults.length} of {searchTotal}. Narrow filters to see more.
+                    </p>
+                  )}
+                </>
               )}
             </div>
           )}
 
           {buyTab === 'tollfree' && (
             <div className="space-y-4">
-              <div className="flex flex-wrap gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">Prefix</label>
+              <div className="flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <Field label="Prefix">
                   <select
                     value={tollPrefix}
                     onChange={(e) => setTollPrefix(e.target.value)}
@@ -387,38 +477,61 @@ export default function DIDs() {
                       </option>
                     ))}
                   </select>
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600">Suffix (optional)</label>
+                </Field>
+                <Field label="Suffix (optional)">
                   <input
                     type="text"
+                    inputMode="numeric"
                     value={tollSuffix}
-                    onChange={(e) => setTollSuffix(e.target.value.replace(/\D/g, ''))}
+                    onChange={(e) => setTollSuffix(e.target.value.replace(/\D/g, '').slice(0, 7))}
                     className="w-32 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                    placeholder="555 etc"
                   />
-                </div>
-                <div className="flex items-end">
+                </Field>
+                <button
+                  type="button"
+                  onClick={runTollFreeSearch}
+                  disabled={tollLoading}
+                  className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
+                >
+                  {tollLoading ? 'Searching…' : 'Search toll-free'}
+                </button>
+                {tollResults && (
                   <button
                     type="button"
-                    onClick={runTollFreeSearch}
-                    disabled={tollLoading}
-                    className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
+                    onClick={() => {
+                      setTollResults(null);
+                      setSelected(new Set());
+                    }}
+                    className="text-sm text-slate-600 hover:text-slate-900"
                   >
-                    {tollLoading ? 'Searching…' : 'Search toll-free'}
+                    Reset
                   </button>
-                </div>
+                )}
               </div>
-              {tollResults && (
-                <DataTable
-                  columns={[buyColumn(tollResults), ...SEARCH_COLS]}
-                  rows={tollResults}
-                  emptyMessage="No toll-free numbers found for this search."
-                />
+              {tollResults !== null && (
+                <>
+                  {tollResults.length === 0 && noInventoryHint}
+                  <DataTable
+                    columns={[buyColumn(tollResults), ...SEARCH_COLS]}
+                    rows={tollResults}
+                    emptyMessage="No toll-free numbers found."
+                  />
+                </>
               )}
             </div>
           )}
         </section>
       )}
     </div>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
+      {label}
+      {children}
+    </label>
   );
 }
