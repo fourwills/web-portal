@@ -94,7 +94,11 @@ export default function DIDs() {
       { key: 'client_billing_rule_name', label: 'Billing plan' },
       { key: 'state', label: 'State' },
       { key: 'country', label: 'Country' },
-      { key: 'assigned_date', label: 'Assigned' },
+      {
+        key: 'created_at',
+        label: 'Assigned',
+        render: (r) => r.created_at ?? r.assigned_date ?? '—',
+      },
       {
         key: '_release',
         label: '',
