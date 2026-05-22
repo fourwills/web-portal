@@ -15,7 +15,8 @@ async function main() {
 
   if (bundle) {
     const js = await fetch(`${PORTAL}/${bundle}`).then((r) => r.text());
-    console.log('Has classic card fields:', js.includes('cardexpmonth') || js.includes('Card number'));
+    console.log('Has Stripe Checkout flow:', js.includes('/stripe/checkout') && js.includes('redirectToCheckout'));
+    console.log('Has classic portal link:', js.includes('clients/billing/online_payment'));
   }
 
   for (const [label, API] of [
@@ -63,26 +64,34 @@ async function runBillingApiTests(API) {
   console.log('Gateway payments count:', gw.payload?.total ?? 0);
 
   const payH = { ...h, 'Content-Type': 'application/json' };
-  for (const body of [
-    {
-      amount: 1,
-      type: 'stripe',
-      status: 'initial',
-      cardnumber: '4242424242424242',
-      cardexpmonth: '12',
-      cardexpyear: '2030',
-      client_name: 'AMS',
-    },
-    { amount: 1, type: 'paypal', status: 'initial' },
-  ]) {
-    const r = await fetch(`${API}/home/client/payment`, {
-      method: 'POST',
-      headers: payH,
-      body: JSON.stringify(body),
-    });
-    const text = await r.text();
-    console.log(`\nPOST payment (${body.type}):`, r.status, text.slice(0, 200));
+
+  const checkoutRes = await fetch(`${API}/stripe/checkout`, {
+    method: 'POST',
+    headers: payH,
+    body: JSON.stringify({ base_url: PORTAL, amount: 1 }),
+  });
+  let checkout = null;
+  try {
+    checkout = await checkoutRes.json();
+  } catch {
+    /* may be html error */
   }
+  console.log(
+    '\nPOST /stripe/checkout:',
+    checkoutRes.status,
+    checkout?.sessionId ? `sessionId=${checkout.sessionId.slice(0, 14)}…` : '(no sessionId)',
+  );
+
+  const directRes = await fetch(`${API}/home/client/payment`, {
+    method: 'POST',
+    headers: payH,
+    body: JSON.stringify({ amount: 1, type: 'paypal', status: 'initial' }),
+  });
+  console.log(
+    'POST /home/client/payment (paypal):',
+    directRes.status,
+    directRes.status === 403 ? '(expected — Stripe Checkout is the supported flow)' : '',
+  );
 
   const cors = await fetch(`${API}/config/public/payment`, {
     method: 'OPTIONS',
