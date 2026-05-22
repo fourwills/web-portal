@@ -11,30 +11,19 @@ import { isMockMode } from '../utils/apiHelpers';
 
 const ROUTING_PREF = ['trunk_name', 'tech_prefix', 'rate_table_name', 'product_name', 'code', 'trunk_id'];
 
-const INGRESS_COLS = [
-  { key: 'trunk_name', label: 'Trunk name' },
-  { key: 'client_ip', label: 'Your registered IP(s)' },
-  { key: 'client_ports', label: 'Port(s)' },
-  { key: 'is_active', label: 'Active', render: (r) => (r.is_active ? 'Yes' : 'No') },
-  { key: 'call_limit', label: 'Call limit' },
-  { key: 'cps_limit', label: 'CPS limit' },
-];
-
-function egressColumns(onEdit) {
+function trunkColumns(extraCols, onEdit, direction) {
   return [
     { key: 'trunk_name', label: 'Trunk name' },
     { key: 'client_ip', label: 'Your registered IP(s)' },
     { key: 'client_ports', label: 'Port(s)' },
-    { key: 'trunk_type2', label: 'Trunk type' },
-    { key: 'auth_type', label: 'Auth' },
-    { key: 'is_active', label: 'Active', render: (r) => (r.is_active ? 'Yes' : 'No') },
+    ...extraCols,
     {
       key: '_edit',
       label: '',
       render: (row) => (
         <button
           type="button"
-          onClick={() => onEdit(row)}
+          onClick={() => onEdit(row, direction)}
           className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-sky-700 hover:bg-sky-50"
         >
           Edit IPs
@@ -43,6 +32,18 @@ function egressColumns(onEdit) {
     },
   ];
 }
+
+const INGRESS_EXTRA = [
+  { key: 'is_active', label: 'Active', render: (r) => (r.is_active ? 'Yes' : 'No') },
+  { key: 'call_limit', label: 'Call limit' },
+  { key: 'cps_limit', label: 'CPS limit' },
+];
+
+const EGRESS_EXTRA = [
+  { key: 'trunk_type2', label: 'Trunk type' },
+  { key: 'auth_type', label: 'Auth' },
+  { key: 'is_active', label: 'Active', render: (r) => (r.is_active ? 'Yes' : 'No') },
+];
 
 function hostColumns(onEdit) {
   return [
@@ -55,25 +56,35 @@ function hostColumns(onEdit) {
     {
       key: '_edit',
       label: '',
-      render: (row) =>
-        row.direction === 'Egress' ? (
+      render: (row) => {
+        const dir = row.direction === 'Ingress' ? 'ingress' : 'egress';
+        return (
           <button
             type="button"
-            onClick={() => onEdit(row)}
+            onClick={() => onEdit(row, dir)}
             className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-sky-700 hover:bg-sky-50"
           >
-            Edit
+            Edit IPs
           </button>
-        ) : (
-          '—'
-        ),
+        );
+      },
     },
   ];
+}
+
+function trunkById(items) {
+  const map = new Map();
+  for (const row of items ?? []) {
+    const id = row.trunk_id ?? row.resource_id;
+    if (id != null) map.set(String(id), row);
+  }
+  return map;
 }
 
 export default function Trunks() {
   const [tab, setTab] = useState('egress');
   const [editTrunk, setEditTrunk] = useState(null);
+  const [editDirection, setEditDirection] = useState('egress');
   const [savingIps, setSavingIps] = useState(false);
   const [actionMsg, setActionMsg] = useState('');
   const [actionError, setActionError] = useState('');
@@ -96,41 +107,44 @@ export default function Trunks() {
     [egress.data],
   );
 
-  const egressById = useMemo(() => {
-    const map = new Map();
-    for (const row of egress.data?.items ?? []) {
-      const id = row.trunk_id ?? row.resource_id;
-      if (id != null) map.set(String(id), row);
-    }
-    return map;
-  }, [egress.data]);
+  const ingressById = useMemo(() => trunkById(ingress.data?.items), [ingress.data]);
+  const egressById = useMemo(() => trunkById(egress.data?.items), [egress.data]);
 
-  const openEdit = async (rowOrHost) => {
+  const openEdit = async (rowOrHost, direction) => {
     setActionError('');
     const trunkId = rowOrHost.trunk_id ?? rowOrHost.resource_id;
     if (!trunkId) {
       setActionError('Cannot edit: trunk id missing.');
       return;
     }
+    const isIngress = direction === 'ingress';
+    setEditDirection(direction);
     try {
-      const trunk = await trunkService.getEgressTrunk(trunkId);
+      const trunk = isIngress
+        ? await trunkService.getIngressTrunk(trunkId)
+        : await trunkService.getEgressTrunk(trunkId);
       setEditTrunk(trunk);
     } catch (err) {
-      const fallback = egressById.get(String(trunkId));
+      const fallback = isIngress ? ingressById.get(String(trunkId)) : egressById.get(String(trunkId));
       if (fallback) setEditTrunk(fallback);
       else setActionError(err.response?.data?.error?.message ?? err.message ?? 'Could not load trunk');
     }
   };
 
-  const handleSaveIps = async (resourceId, hosts) => {
+  const handleSaveIps = async (resourceId, hostEntries) => {
     setSavingIps(true);
     setActionError('');
     setActionMsg('');
     try {
-      await trunkService.updateEgressTrunkHosts(resourceId, hosts);
+      if (editDirection === 'ingress') {
+        await trunkService.updateIngressTrunkHosts(resourceId, hostEntries);
+        ingress.refetch();
+      } else {
+        await trunkService.updateEgressTrunkHosts(resourceId, hostEntries);
+        egress.refetch();
+      }
       setActionMsg('Registered IPs updated.');
       setEditTrunk(null);
-      egress.refetch();
       hosts.refetch();
     } catch (err) {
       setActionError(err.response?.data?.error?.message ?? err.message ?? 'Failed to update IPs');
@@ -139,7 +153,8 @@ export default function Trunks() {
     }
   };
 
-  const egressCols = egressColumns(openEdit);
+  const ingressCols = trunkColumns(INGRESS_EXTRA, openEdit, 'ingress');
+  const egressCols = trunkColumns(EGRESS_EXTRA, openEdit, 'egress');
   const hostCols = hostColumns(openEdit);
 
   return (
@@ -151,8 +166,8 @@ export default function Trunks() {
       )}
 
       <p className="text-sm text-slate-600">
-        For DID origination, register <strong>your IP address</strong> on the egress trunk. Use{' '}
-        <strong>Edit IPs</strong> to update authorized hosts from this portal.
+        Register <strong>your IP address</strong> on ingress or egress trunks. Use <strong>Edit IPs</strong> on either
+        trunk tab to update authorized hosts from this portal.
       </p>
 
       <ErrorBanner message={actionError} />
@@ -161,6 +176,7 @@ export default function Trunks() {
       <EgressIpEditorModal
         open={Boolean(editTrunk)}
         trunk={editTrunk}
+        direction={editDirection}
         busy={savingIps}
         onSave={handleSaveIps}
         onClose={() => !savingIps && setEditTrunk(null)}
@@ -198,7 +214,7 @@ export default function Trunks() {
           <DataTable
             columns={hostCols}
             rows={hostItems}
-            emptyMessage="No host IPs registered on your egress trunk yet. Use Edit IPs on the egress trunk tab to add your public IP."
+            emptyMessage="No host IPs registered yet. Use Edit IPs on the ingress or egress trunk tabs."
           />
         )
       )}
@@ -223,11 +239,18 @@ export default function Trunks() {
         ) : ingress.error ? (
           <PageError message={ingress.error} onRetry={ingress.refetch} />
         ) : (
-          <DataTable
-            columns={INGRESS_COLS}
-            rows={ingressRows}
-            emptyMessage="No ingress trunks found."
-          />
+          <>
+            {ingressRows.some((r) => r.client_ip === '—') && ingressRows.length > 0 && (
+              <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">
+                No registered IP on this ingress trunk yet. Click <strong>Edit IPs</strong> to add your public IP.
+              </p>
+            )}
+            <DataTable
+              columns={ingressCols}
+              rows={ingressRows}
+              emptyMessage="No ingress trunks found."
+            />
+          </>
         )
       )}
 
@@ -240,8 +263,8 @@ export default function Trunks() {
           <>
             {egressRows.some((r) => r.client_ip === '—') && egressRows.length > 0 && (
               <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">
-                No registered IP on this egress trunk yet. Click <strong>Edit IPs</strong> to add your public IP for
-                DID traffic.
+                No registered IP on this egress trunk yet. Click <strong>Edit IPs</strong> to add your public IP for DID
+                traffic.
               </p>
             )}
             <DataTable

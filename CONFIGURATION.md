@@ -1,145 +1,214 @@
 # Client Portal — Configuration Guide
 
-This document explains **where to change settings** when you move the API, update server IPs, or redeploy the portal. No application code changes are required for normal configuration.
+This guide explains **how to change the API base URL** and **how IP addresses work** in the portal — both for **operators** (build/deploy settings) and for **end clients** (self-service in the UI).
+
+No application code changes are needed for normal configuration.
 
 ---
 
-## 1. API base URL
+## Summary: what changes where
 
-The portal talks to the DNL **Client Portal API**. All login, billing, trunks, rates, and DIDs data use this base URL.
+| What you want to change | Who changes it | Where | Redeploy portal? |
+|-------------------------|----------------|-------|------------------|
+| **API server URL** | Operator / developer | `.env`, `.env.production`, `.env.hostverge`, or Vercel env vars | **Yes** |
+| **Our platform IPs** (switch/provider side) | Operator | `VITE_PLATFORM_IPS` at build time | **Yes** |
+| **Client trunk IPs** (ingress or egress) | Client (or admin in DNL) | Portal → **Trunks** → **Edit IPs** | **No** (live API) |
+| **Client default IPs** | Admin in DNL | Back office / API | **No** |
 
-**Default (production):** `https://portal.incorpus.in/api_dnl/v1`
+---
 
-### Where to change it
+## 1. Change API base URL
 
-| Environment | What to edit | Notes |
-|-------------|--------------|--------|
-| **Local development** | `client-portal/.env` | Copy from `.env.example` if missing. Key: `VITE_API_BASE_URL` |
-| **Production build (Vercel)** | Vercel → Project → **Settings** → **Environment Variables** | Variable name: `VITE_API_BASE_URL` |
-| **Production build (fallback)** | `client-portal/.env.production` | Used when Vercel env vars are not set |
-| **Local dev proxy target** | `client-portal/vite.config.js` | Only if you use a **relative** URL like `/api_dnl/v1` (see below) |
+The portal calls the DNL **Client Portal API** for login, billing, trunks, rates, and DIDs.
 
-### Two ways to set the URL
+**Default API:** `https://portal.incorpus.in/api_dnl/v1`
 
-**Option A — Relative path (recommended on Vercel)**
+### Rules
+
+- Use only the base path **`/api_dnl/v1`** — do **not** add `/auth/login`.
+- Login is `POST {base}/auth` with `{ "email_or_name", "password" }`.
+- Vite **bakes** `VITE_API_BASE_URL` into the build. After any change you must **rebuild and redeploy**.
+
+---
+
+### 1a. Local development
+
+1. Copy `.env.example` to `.env` if you do not have one.
+2. Edit **`client-portal/.env`**:
+
+```env
+# Option 1 — relative URL (uses Vite dev proxy in vite.config.js)
+VITE_API_BASE_URL=/api_dnl/v1
+
+# Option 2 — full URL (calls API directly; API must allow CORS from http://localhost:5174)
+VITE_API_BASE_URL=https://portal.incorpus.in/api_dnl/v1
+```
+
+3. If you use `/api_dnl/v1` locally, the proxy target is in **`vite.config.js`** (`server.proxy['/api_dnl/v1'].target`). Change that when the real API host moves.
+
+4. Run:
+
+```powershell
+cd client-portal
+npm run dev
+```
+
+---
+
+### 1b. Production on Vercel
+
+| Step | Action |
+|------|--------|
+| 1 | Vercel → your project → **Settings** → **Environment Variables** |
+| 2 | Set **`VITE_API_BASE_URL`** (Production, and Preview if needed) |
+| 3 | **Redeploy** the project |
+
+**Relative URL (recommended on Vercel):**
 
 ```env
 VITE_API_BASE_URL=/api_dnl/v1
 ```
 
-The browser calls your portal host (e.g. `https://web-portal-azure.vercel.app/api_dnl/v1/...`).  
-Vercel forwards those requests using **`vercel.json`**:
+The browser calls your Vercel app; **`vercel.json`** proxies to the real API:
 
 ```json
 "destination": "https://portal.incorpus.in/api_dnl/v1/:path*"
 ```
 
-If you change the **real API server**, update **both**:
+If the **API hostname** changes, update **both**:
 
 1. `VITE_API_BASE_URL` (usually keep `/api_dnl/v1`)
-2. `vercel.json` → `rewrites` → `destination` → your new API host
+2. `vercel.json` → `rewrites` → `destination`
 
-**Option B — Full URL (direct to API)**
+**Full URL (no proxy):**
 
 ```env
 VITE_API_BASE_URL=https://your-api.example.com/api_dnl/v1
 ```
 
-The portal calls the API host directly. The API must allow **CORS** from your portal domain (e.g. `https://web-portal-azure.vercel.app`).
+The API must allow **CORS** from your Vercel URL (e.g. `https://web-portal-azure.vercel.app`).
 
-For **local dev** with a full URL, you can skip the Vite proxy or point `vite.config.js` `proxy.target` at your API host.
-
-### Rules
-
-- Use the path **`/api_dnl/v1`** only — do **not** include `/auth/login` in the base URL.
-- Login is `POST {base}/auth` with body `{ "email_or_name", "password" }`.
-- After any change: **rebuild and redeploy** (Vite bakes env vars in at build time).
+**Fallback file (if Vercel env vars are empty):** `client-portal/.env.production`
 
 ```powershell
-cd client-portal
 npm run build
 ```
 
-On Vercel: push to git or trigger **Redeploy** after changing environment variables.
+---
 
-### Verify at build time
+### 1c. Production on Hostverge / cPanel (`portal.thevoiptalk.com`)
 
-The build script prints the resolved URL:
+Shared hosting **cannot** use `vercel.json`. Use a **full API URL** in **`client-portal/.env.hostverge`**:
 
-```text
-OK  VITE_API_BASE_URL=/api_dnl/v1 (.env.production)
+```env
+VITE_API_BASE_URL=https://portal.incorpus.in/api_dnl/v1
 ```
+
+Build and upload:
+
+```powershell
+cd client-portal
+npm run build:hostverge
+```
+
+Upload everything inside **`dist/`** to the subdomain document root. See **[DEPLOYMENT_HOSTVERGE.md](./DEPLOYMENT_HOSTVERGE.md)**.
+
+**CORS:** The API must allow origin **`https://portal.thevoiptalk.com`**.
 
 ---
 
-## 2. IP addresses
+### 1d. Verify the URL was applied
 
-There are **three different “IP” concepts** in the portal. Change the right one depending on what you mean.
+After `npm run build` or `npm run build:hostverge`, the console should show:
 
-### A. Our platform IPs (provider / switch side)
+```text
+OK  VITE_API_BASE_URL=https://portal.incorpus.in/api_dnl/v1 (.env.hostverge)
+```
 
-**What clients see:** Account → **Our platform IPs**  
-**Source:** Configuration only — **not** loaded from the API  
-**Who changes it:** You (provider), when your switch/server IP is known
+Hostverge builds also check that the bundle uses an absolute API URL (not `/api_dnl/v1` only).
 
-| Where to change | How |
-|-----------------|-----|
-| **Build / deploy** | Environment variable `VITE_PLATFORM_IPS` |
-| **Local** | `client-portal/.env` or `.env.production` |
-| **Vercel** | Settings → Environment Variables → `VITE_PLATFORM_IPS` |
+---
 
-**Format (comma-separated, optional port):**
+## 2. Change IP addresses
+
+There are **four** IP-related concepts. Use the right one.
+
+---
+
+### 2a. Our platform IPs (provider / switch — all clients)
+
+**Purpose:** Show clients which **your** platform/switch IPs they should use (not loaded from the API).
+
+**Where clients see it:** **Account** → **Our platform IPs**
+
+**Who changes it:** Operator / provider before deploy
+
+| Hosting | File / setting |
+|---------|----------------|
+| Local dev | `client-portal/.env` → `VITE_PLATFORM_IPS` |
+| Vercel | Environment variable **`VITE_PLATFORM_IPS`** |
+| Default production file | `client-portal/.env.production` |
+| Hostverge | `client-portal/.env.hostverge` → `VITE_PLATFORM_IPS` |
+
+**Format (comma-separated; optional `:port`, default port 5060):**
 
 ```env
-# Single IP
 VITE_PLATFORM_IPS=163.172.118.64
-
-# IP with SIP port
 VITE_PLATFORM_IPS=163.172.118.64:5060
-
-# Multiple
 VITE_PLATFORM_IPS=163.172.118.64:5060,203.0.113.1:5060
 ```
 
-Default port is **5060** if omitted.
+**After change:** rebuild and redeploy (`npm run build`, `npm run build:hostverge`, or Vercel redeploy).
 
-After changing: **rebuild and redeploy** (same as API URL).
-
-**Code reference:** `src/utils/platformIps.js` reads `import.meta.env.VITE_PLATFORM_IPS`.
+**Code:** `src/utils/platformIps.js` → Account `NetworkIpsSection.jsx`
 
 ---
 
-### B. Client egress IP (customer side — DID / trunk auth)
+### 2b. Client trunk IPs — ingress and egress (per client, in the portal)
 
-**What clients see:** Trunks → **Egress trunk** or **Registered IPs** → **Edit IP**  
-**Source:** DNL API (`PATCH /home/client/egress_trunk/{id}`)  
-**Who changes it:** The **client** in the portal, or **you** in DNL admin
+**Purpose:** Register the **client’s** public IP(s) on their trunks for SIP/DID traffic.
 
-Clients update their own authorized host IP from the portal. You do **not** set this in `.env`.
+**Where clients see it:**
 
-If a client cannot edit IPs, configure the trunk in **DNL admin** (Add Host on egress trunk).
+| Screen | Action |
+|--------|--------|
+| **Trunks** → **Ingress trunks** | **Edit IPs** on each ingress trunk |
+| **Trunks** → **Egress trunks** | **Edit IPs** on each egress trunk |
+| **Trunks** → **Registered IPs** | **Edit IPs** (opens editor for that trunk) |
 
-**Code reference:** `src/pages/Trunks.jsx`, `src/services/trunkService.js`
+**Who changes it:** The **logged-in client** in the portal (or you in **DNL admin** if the API denies client PATCH).
+
+**Not in `.env`** — changes go live via API; **no portal redeploy** needed.
+
+| Trunk type | API (client self-service) |
+|------------|---------------------------|
+| Ingress | `GET` / `PATCH` `/home/client/ingress_trunk/{id}` |
+| Egress | `GET` / `PATCH` `/home/client/egress_trunk/{id}` |
+
+**Code:** `src/pages/Trunks.jsx`, `src/services/trunkService.js`, `src/components/Trunks/EgressIpEditorModal.jsx`
+
+If **Edit IPs** fails with **403**, enable client trunk host updates in DNL admin or set hosts in admin (**Add Host** on the trunk).
 
 ---
 
-### C. Client default IPs (account defaults from API)
+### 2c. Client default IPs (account defaults from API)
 
-**What clients see:** Account → **Your default IPs**  
-**Source:** API `GET /home/client/default_ip/list`  
-**Who changes it:** DNL admin / back office — not portal env files
+**Where clients see it:** **Account** → **Your default IPs**
+
+**Source:** `GET /home/client/default_ip/list`
+
+**Who changes it:** DNL admin / back office — **not** portal env files or the Trunks editor.
 
 ---
 
-## 3. Quick reference
+## 3. Quick reference by hosting
 
-| Setting | Variable / file | Portal location | Redeploy after change? |
-|---------|-----------------|-----------------|------------------------|
-| API base URL | `VITE_API_BASE_URL` | All sections | **Yes** |
-| API proxy (relative URL) | `vercel.json` rewrites | Behind the scenes | **Yes** (redeploy) |
-| Platform IPs | `VITE_PLATFORM_IPS` | Account → Our platform IPs | **Yes** |
-| Client egress IP | API / admin | Trunks → Edit IP | No (live API) |
-| Mock login (dev only) | `VITE_DEV_MOCK_AUTH` | Login page | **Yes** |
+| Setting | Vercel | Hostverge (`build:hostverge`) | Local dev |
+|---------|--------|-------------------------------|-----------|
+| API URL | Vercel env + optional `vercel.json` | `.env.hostverge` | `.env` + optional `vite.config.js` proxy |
+| Platform IPs | Vercel env `VITE_PLATFORM_IPS` | `.env.hostverge` | `.env` |
+| Client trunk IPs | Portal UI only | Portal UI only | Portal UI only |
+| Build command | `npm run build` | `npm run build:hostverge` | `npm run dev` |
 
 ---
 
@@ -147,46 +216,54 @@ If a client cannot edit IPs, configure the trunk in **DNL admin** (Add Host on e
 
 ```
 client-portal/
-├── .env                 # Local overrides (not committed — use .env.example as template)
-├── .env.example         # Template for developers
-├── .env.production      # Default production values (committed)
-├── vercel.json          # Proxy /api_dnl/v1 → real API when using relative base URL
-├── vite.config.js       # Local dev proxy target (portal.incorpus.in)
-└── src/utils/platformIps.js   # Reads VITE_PLATFORM_IPS
+├── .env                 # Local overrides (gitignored; copy from .env.example)
+├── .env.example         # Template
+├── .env.production      # Vercel / default production (relative API URL)
+├── .env.hostverge       # Hostverge build (full API URL + platform IPs)
+├── vercel.json          # API proxy when VITE_API_BASE_URL=/api_dnl/v1
+├── vite.config.js       # Local dev proxy target
+├── public/.htaccess     # SPA routing on Apache (included in dist/)
+└── src/utils/platformIps.js
 ```
 
 ---
 
-## 5. Hostverge / cPanel (thevoiptalk.com)
+## 5. Common tasks (step-by-step)
 
-To host on **`https://portal.thevoiptalk.com`** (static upload, no Node on server), follow:
+### Move API to a new server
 
-**[DEPLOYMENT_HOSTVERGE.md](./DEPLOYMENT_HOSTVERGE.md)**
+1. Set `VITE_API_BASE_URL` to `https://NEW-HOST/api_dnl/v1` (or keep `/api_dnl/v1` on Vercel and update `vercel.json` destination).
+2. Rebuild (`npm run build` or `npm run build:hostverge`).
+3. Redeploy / re-upload `dist/`.
+4. Ask API admin to allow **CORS** from your portal domain(s).
 
-```powershell
-npm run build:hostverge
-```
+### Show a new platform / switch IP to all clients
 
-Uses **`.env.hostverge`** (full API URL). `vercel.json` rewrites do not apply on shared hosting.
+1. Edit `VITE_PLATFORM_IPS` in the correct env file (see §2a).
+2. Rebuild and redeploy.
 
----
+### Let one client update their SIP source IP
 
-## 6. Vercel deployment reminder
-
-1. Repository root may be `WebPortal`; set Vercel **Root Directory** to **`client-portal`**.
-2. Set or confirm environment variables, then **Redeploy**.
-3. Production URL example: `https://web-portal-azure.vercel.app`
-
-For API documentation (paths, auth header), see Swagger:  
-`https://portal.incorpus.in/api_dnl/v1/swagger.json`
+1. Client logs in → **Trunks** → **Ingress trunks** or **Egress trunks** → **Edit IPs**.
+2. Enter IP and port (default 5060) → **Save IPs**.
+3. If forbidden, fix permissions or add host in DNL admin.
 
 ---
 
-## 7. Support contacts (typical workflow)
+## 6. Related docs
 
-| Task | Action |
-|------|--------|
-| New API server hostname | Update `VITE_API_BASE_URL` and/or `vercel.json`, redeploy |
-| New platform / switch IP for all clients | Update `VITE_PLATFORM_IPS`, redeploy |
-| One client’s SIP source IP | Client uses **Trunks → Edit IP**, or you set host in DNL admin |
-| New DID / trunk / billing behavior | Usually DNL admin + API permissions — not portal env |
+| Topic | Document |
+|-------|----------|
+| Hostverge deploy (`portal.thevoiptalk.com`) | [DEPLOYMENT_HOSTVERGE.md](./DEPLOYMENT_HOSTVERGE.md) |
+| Dev setup & tests | [README.md](./README.md) |
+| API auth field names | [TEST_CREDENTIALS.md](./TEST_CREDENTIALS.md) |
+
+**Swagger:** `https://portal.incorpus.in/api_dnl/v1/swagger.json`
+
+---
+
+## 7. Vercel reminder
+
+1. Set Vercel **Root Directory** to **`client-portal`** if the repo root is `WebPortal`.
+2. Set `VITE_API_BASE_URL` and `VITE_PLATFORM_IPS`, then **Redeploy**.
+3. Example URL: `https://web-portal-azure.vercel.app`

@@ -3,7 +3,7 @@ import { extractTrunkHostEntries } from '../../utils/trunkHosts';
 
 const emptyHost = () => ({ ip: '', port: 5060, addr_type: 'ip', fqdn: '' });
 
-export default function EgressIpEditorModal({ open, trunk, busy, onSave, onClose }) {
+export default function EgressIpEditorModal({ open, trunk, direction = 'egress', busy, onSave, onClose }) {
   const [hosts, setHosts] = useState([emptyHost()]);
 
   useEffect(() => {
@@ -15,7 +15,12 @@ export default function EgressIpEditorModal({ open, trunk, busy, onSave, onClose
   if (!open || !trunk) return null;
 
   const trunkId = trunk.trunk_id ?? trunk.resource_id;
-  const trunkName = trunk.trunk_name ?? trunk.egress_name ?? 'Egress trunk';
+  const isIngress = direction === 'ingress';
+  const trunkName =
+    trunk.trunk_name ?? trunk.ingress_name ?? trunk.egress_name ?? (isIngress ? 'Ingress trunk' : 'Egress trunk');
+  const purpose = isIngress
+    ? 'authorized hosts for inbound traffic to this ingress trunk.'
+    : 'authorized hosts for DID origination on this egress trunk.';
 
   const updateHost = (index, field, value) => {
     setHosts((prev) => prev.map((h, i) => (i === index ? { ...h, [field]: value } : h)));
@@ -41,7 +46,7 @@ export default function EgressIpEditorModal({ open, trunk, busy, onSave, onClose
       >
         <h3 className="text-lg font-semibold text-slate-900">Edit registered IPs</h3>
         <p className="mt-1 text-sm text-slate-600">
-          Trunk: <strong>{trunkName}</strong> — authorized hosts for DID origination.
+          Trunk: <strong>{trunkName}</strong> — {purpose}
         </p>
 
         <div className="mt-4 space-y-3">

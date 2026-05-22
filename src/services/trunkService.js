@@ -21,6 +21,17 @@ export const trunkService = {
     return unwrapList(res.data);
   },
 
+  getIngressTrunk: async (resourceId) => {
+    if (isMockMode()) {
+      const item = mockIngressTrunks.items.find(
+        (t) => String(t.resource_id) === String(resourceId) || String(t.trunk_id) === String(resourceId),
+      );
+      return item ?? mockIngressTrunks.items[0];
+    }
+    const res = await api.get(`/home/client/ingress_trunk/${resourceId}`);
+    return unwrapPayload(res.data);
+  },
+
   getEgressTrunk: async (resourceId) => {
     if (isMockMode()) {
       const item = mockEgressTrunks.items.find(
@@ -30,6 +41,14 @@ export const trunkService = {
     }
     const res = await api.get(`/home/client/egress_trunk/${resourceId}`);
     return unwrapPayload(res.data);
+  },
+
+  /** Update authorized hosts on ingress trunk (client self-service). */
+  updateIngressTrunkHosts: async (resourceId, hosts) => {
+    if (isMockMode()) return { success: true };
+    const ip = hostsToApiPayload(hosts);
+    const res = await api.patch(`/home/client/ingress_trunk/${resourceId}`, { ip });
+    return unwrapPayload(res.data) ?? res.data;
   },
 
   /** Update authorized hosts on egress trunk (client self-service). */
