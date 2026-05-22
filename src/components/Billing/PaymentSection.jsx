@@ -90,7 +90,38 @@ export default function PaymentSection() {
         onError: (err) => setError(err?.message ?? 'PayPal error'),
       }).render(paypalRef.current);
     } catch {
-      setError('Could not load PayPal. Check ad blockers or try again.');
+      setError(
+        'PayPal checkout could not load. The value in payment settings may not be a PayPal REST Client ID, or an ad blocker may block the SDK. You can still record a payment via the API button below.',
+      );
+    }
+  };
+
+  const handlePayPalApiRecord = async () => {
+    if (!parsedAmount || parsedAmount <= 0) {
+      setError('Enter a valid amount.');
+      return;
+    }
+    setPaying(true);
+    setError('');
+    setMessage('');
+    try {
+      await paymentService.createGatewayPayment({
+        amount: parsedAmount,
+        type: 'paypal',
+        status: 'initial',
+        client_name: profile?.company_name ?? profile?.client_name,
+      });
+      setMessage('PayPal payment request recorded. Complete payment in your provider’s billing flow if required.');
+      gatewayQuery.refetch();
+    } catch (err) {
+      const msg = err.response?.data?.error?.message ?? err.message ?? 'PayPal payment failed';
+      setError(
+        err.response?.status === 403
+          ? `${msg} — ask your provider to enable client payment permissions.`
+          : msg,
+      );
+    } finally {
+      setPaying(false);
     }
   };
 
@@ -171,6 +202,14 @@ export default function PaymentSection() {
               <p className="mt-1 text-xs text-amber-700">PayPal test mode is enabled.</p>
             )}
             {paypalReady && <div ref={paypalRef} className="mt-3 max-w-md" />}
+            <button
+              type="button"
+              disabled={paying || !parsedAmount || parsedAmount <= 0}
+              onClick={handlePayPalApiRecord}
+              className="mt-2 text-sm text-slate-600 underline hover:text-slate-900 disabled:opacity-50"
+            >
+              Record PayPal payment via API (no SDK)
+            </button>
           </div>
         )}
 
