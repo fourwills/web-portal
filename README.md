@@ -2,6 +2,8 @@
 
 Responsive client portal for the DNL API (`ClientPortal` + `Auth` endpoints).
 
+**Operations guide (API URL, platform IPs, client egress IPs):** see **[CONFIGURATION.md](./CONFIGURATION.md)**.
+
 ## Prerequisites
 
 - **Node.js 22+** and **npm** on your PATH
@@ -93,29 +95,15 @@ Vercel is only hosting the **frontend**; all data still comes from your DNL API 
 | Billing | Invoices; Stripe (card number + expiry → `POST /home/client/payment`, same as [classic portal](https://portal.incorpus.in/#/clients/billing/online_payment)); PayPal SDK |
 | Trunks | Registered host IPs from trunk `ip[]`; routing via `/home/client/trunk/{id}/prefix/list`; ingress/egress lists |
 | Rates | Primary: trunk routing (`rate_table_name`, `tech_prefix`); fallback global `rate_table/list`, `rate/list`; CSV export (API or client-side) |
-| DIDs | `did/list`, `did/free/list`, `did_api/search_local`, `did_api/order_local` |
-
-### Platform IPs (static)
-
-Set at build time — **not** loaded from the API:
-
-```env
-VITE_PLATFORM_IPS=163.172.118.64
-# or multiple: 163.172.118.64:5060,other.ip:5060
-```
-
-Change this when the real server IP is ready, then rebuild/redeploy.
+| DIDs | `did/list`, release, `did_api/search_local`, `did_api/order_local` (see [CONFIGURATION.md](./CONFIGURATION.md)) |
 
 ## Configuration
 
-Copy `.env.example` to `.env`:
+See **[CONFIGURATION.md](./CONFIGURATION.md)** for:
 
-```
-VITE_API_BASE_URL=https://portal.incorpus.in/api_dnl/v1
-VITE_DEV_MOCK_AUTH=false
-```
-
-Change `VITE_API_BASE_URL` to point at any server — no code changes needed.
+- Changing **API base URL** (`.env`, Vercel env vars, `vercel.json`)
+- Changing **platform IPs** (`VITE_PLATFORM_IPS`)
+- **Client egress IPs** (Trunks → Edit IP in the portal)
 
 **Swagger (API reference, not a runtime dependency):**
 
