@@ -4,6 +4,7 @@ import { useApi } from '../hooks/useApi';
 import { PageError, PageLoading } from '../components/UI/PageState';
 import ErrorBanner from '../components/UI/ErrorBanner';
 import { isMockMode, labelize, pickDisplayFields } from '../utils/apiHelpers';
+import NetworkIpsSection from '../components/Account/NetworkIpsSection';
 
 const EDITABLE_KEYS = new Set([
   'client_name',
@@ -133,6 +134,8 @@ export default function Account() {
           {saving ? 'Saving…' : 'Save changes'}
         </button>
       </form>
+
+      <NetworkIpsSection />
 
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="mb-2 text-lg font-semibold text-slate-900">API keys</h2>

@@ -6,6 +6,9 @@ import {
   Receipt,
   LogOut,
   X,
+  Network,
+  Table2,
+  Phone,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -14,6 +17,9 @@ const navItems = [
   { to: '/account', label: 'Account', icon: User },
   { to: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
   { to: '/billing', label: 'Billing', icon: Receipt },
+  { to: '/trunks', label: 'Trunks', icon: Network },
+  { to: '/rates', label: 'Rates', icon: Table2 },
+  { to: '/dids', label: 'DIDs', icon: Phone },
 ];
 
 function linkClass({ isActive }) {

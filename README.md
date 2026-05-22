@@ -13,7 +13,6 @@ If PowerShell says **running scripts is disabled** when you run `npm`, use **`np
 If `npm` is not recognized or `nvm use` shows **Access is denied**, run once in PowerShell:
 
 ```powershell
-cd e:\Development\Projects\WebPortal\client-portal
 .\scripts\setup-env.ps1
 ```
 
@@ -30,7 +29,6 @@ This script:
 PowerShell may block `npm` (execution policy). Use **`npm.cmd`** or the helper scripts:
 
 ```powershell
-cd e:\Development\Projects\WebPortal\client-portal
 npm.cmd install
 npm.cmd run dev
 ```
@@ -68,6 +66,45 @@ If these are not set, the build uses committed `.env.production` (same values).
 3. Redeploy after changing env vars (Vite bakes them in at build time).
 
 CORS on the production API already allows `https://web-portal-azure.vercel.app`.
+
+## Self-hosting (not only Vercel)
+
+This is a **static React app** (`npm run build` → `dist/`). It runs the same on:
+
+| Host | How |
+|------|-----|
+| **Vercel / Netlify / Cloudflare Pages** | Connect repo, set env vars, deploy `dist` |
+| **Your IIS / Apache / nginx server** | Copy `dist/` to the web root; enable SPA fallback to `index.html` (same as `vercel.json` rewrites) |
+| **Internal LAN** | Host `dist` on any internal HTTP server; set `VITE_API_BASE_URL` to your API IP/hostname |
+
+Requirements for any host:
+
+1. HTTPS recommended (browsers + payment gateways)
+2. API server must allow **CORS** from your portal origin (or serve portal and API on the same domain via reverse proxy)
+3. `VITE_API_BASE_URL` points at your DNL API (e.g. `https://portal.incorpus.in/api_dnl/v1`)
+
+Vercel is only hosting the **frontend**; all data still comes from your DNL API backend.
+
+## Portal sections
+
+| Section | API |
+|---------|-----|
+| Account | Profile, API keys, **platform IPs** (`VITE_PLATFORM_IPS`), default IPs |
+| Billing | Invoices, PayPal/Stripe (`/config/public/payment`, `/home/client/payment`) |
+| Trunks | `/home/client/ingress_trunk/list`, `egress_trunk/list` |
+| Rates | `/home/client/rate_table/list`, `rate/list` + **CSV download** |
+| DIDs | `did/list`, `did/free/list`, `did_api/search_local`, `did_api/order_local` |
+
+### Platform IPs (static)
+
+Set at build time — **not** loaded from the API:
+
+```env
+VITE_PLATFORM_IPS=1.1.1.1
+# or multiple: 1.1.1.1:5060,2.2.2.2:5060
+```
+
+Change this when the real server IP is ready, then rebuild/redeploy.
 
 ## Configuration
 
