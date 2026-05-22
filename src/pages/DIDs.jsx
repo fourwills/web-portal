@@ -34,7 +34,6 @@ export default function DIDs() {
 
   const mine = useApi(() => didService.getMyDids({ per_page: 100 }), []);
   const free = useApi(() => didService.getFreeDids(), []);
-  const rules = useApi(() => didService.getBillingRules({ per_page: 100 }), []);
 
   const [searchCountry, setSearchCountry] = useState('US');
   const [searchState, setSearchState] = useState('');
@@ -59,12 +58,6 @@ export default function DIDs() {
 
   const freeItems = free.data?.items ?? [];
   const mineItems = mine.data?.items ?? [];
-  const ruleItems = rules.data?.items ?? [];
-
-  const billingPlanText = useMemo(() => {
-    if (!ruleItems.length) return '';
-    return ruleItems.map((r) => r.name ?? r.client_billing_rule_name).filter(Boolean).join(', ');
-  }, [ruleItems]);
 
   const handleReleaseConfirm = async () => {
     if (!releaseTarget) return;
@@ -94,7 +87,11 @@ export default function DIDs() {
       { key: 'client_billing_rule_name', label: 'Billing plan' },
       { key: 'state', label: 'State' },
       { key: 'country', label: 'Country' },
-      { key: 'assigned_date', label: 'Assigned' },
+      {
+        key: 'created_at',
+        label: 'Assigned',
+        render: (r) => r.created_at ?? r.assigned_date ?? '—',
+      },
       {
         key: '_release',
         label: '',
@@ -236,12 +233,11 @@ export default function DIDs() {
   };
 
   const noInventoryHint = (
-    <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
-      <p className="font-medium">No DIDs available right now.</p>
-      <p className="mt-1 text-sky-800">
-        Your account has these billing plans assigned: <strong>{billingPlanText || '—'}</strong>. If you expect free
-        numbers here, ask your provider to assign DIDs to your free pool (admin → Client → DID Assignment) or load
-        repository inventory for these plans.
+    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+      <p className="font-medium text-slate-900">No DIDs available right now.</p>
+      <p className="mt-1">
+        Try a different state, NPA, or toll-free prefix above. If no numbers appear, please contact us to add DIDs to
+        your account.
       </p>
     </div>
   );
@@ -293,7 +289,6 @@ export default function DIDs() {
           onClick={() => {
             mine.refetch();
             free.refetch();
-            rules.refetch();
             setActionMsg('Refreshed.');
             setTimeout(() => setActionMsg(''), 2000);
           }}
@@ -407,14 +402,13 @@ export default function DIDs() {
               ) : (
                 <>
                   <p className="text-sm text-slate-500">
-                    Numbers in your free pool (no end date). If empty, try Search local or Toll-free, or ask your
-                    provider to load free DIDs against your billing plans.
+                    Numbers currently available for your account. If empty, try Search local or Toll-free.
                   </p>
                   {freeItems.length === 0 && noInventoryHint}
                   <DataTable
                     columns={[buyColumn(freeItems), ...FREE_COLS]}
                     rows={freeItems}
-                    emptyMessage="No free DIDs in your pool right now."
+                    emptyMessage="No numbers available right now."
                   />
                 </>
               )}

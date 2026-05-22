@@ -41,7 +41,7 @@ export const didService = {
   getMyDids: async (params = {}) => {
     if (isMockMode()) return mockDids;
     const res = await api.get('/home/client/did/list', {
-      params: { per_page: 50, page: 0, order_by: 'assigned_date', order_dir: 'desc', ...params },
+      params: { per_page: 50, page: 0, order_by: 'created_at', order_dir: 'desc', ...params },
     });
     return unwrapList(res.data);
   },
