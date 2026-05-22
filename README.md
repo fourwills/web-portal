@@ -100,8 +100,8 @@ Vercel is only hosting the **frontend**; all data still comes from your DNL API 
 Set at build time — **not** loaded from the API:
 
 ```env
-VITE_PLATFORM_IPS=1.1.1.1
-# or multiple: 1.1.1.1:5060,2.2.2.2:5060
+VITE_PLATFORM_IPS=163.172.118.64
+# or multiple: 163.172.118.64:5060,other.ip:5060
 ```
 
 Change this when the real server IP is ready, then rebuild/redeploy.

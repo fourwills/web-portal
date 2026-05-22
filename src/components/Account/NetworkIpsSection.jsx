@@ -32,7 +32,7 @@ export default function NetworkIpsSection() {
           <DataTable
             columns={platformColumns}
             rows={platformIps}
-            emptyMessage="No platform IPs configured. Set VITE_PLATFORM_IPS in environment (e.g. 1.1.1.1)."
+            emptyMessage="No platform IPs configured. Set VITE_PLATFORM_IPS in environment."
           />
         </div>
       </div>
